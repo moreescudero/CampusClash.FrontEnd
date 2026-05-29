@@ -67,6 +67,7 @@ export function Register() {
         isEmailConfirmed: false,
         isRiotLinked: false,
         isValidated: false,
+        validationSubmitted: false,
       })
       navigate('/confirm-email')
     } catch (err) {

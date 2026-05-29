@@ -4,6 +4,7 @@ import { OnboardingLayout } from '../components/OnboardingLayout'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { api } from '../lib/api'
+import { getProfile, setProfile } from '../lib/auth'
 
 const REGIONS = [
   { value: 'LAS', label: 'LAS – Latinoamérica Sur' },
@@ -24,6 +25,8 @@ export function LinkRiot() {
     setLoading(true)
     try {
       await api.linkRiot(form)
+      const existing = getProfile()
+      if (existing) setProfile({ ...existing, isRiotLinked: true })
       navigate('/success')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo vincular la cuenta. Verificá el nombre.')

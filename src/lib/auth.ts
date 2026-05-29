@@ -8,6 +8,7 @@ export interface UserProfile {
   isEmailConfirmed: boolean
   isRiotLinked: boolean
   isValidated: boolean
+  validationSubmitted: boolean // sent the form, pending admin approval
 }
 
 const PROFILE_KEY = 'cc_profile'

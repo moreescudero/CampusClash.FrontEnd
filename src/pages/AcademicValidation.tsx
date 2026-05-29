@@ -4,6 +4,7 @@ import { OnboardingLayout } from '../components/OnboardingLayout'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { api } from '../lib/api'
+import { getProfile, setProfile } from '../lib/auth'
 
 const YEARS = ['1°', '2°', '3°', '4°', '5°', 'Graduado/a']
 
@@ -70,6 +71,8 @@ export function AcademicValidation() {
     setLoading(true)
     try {
       await api.requestValidation({ ...form, file })
+      const existing = getProfile()
+      if (existing) setProfile({ ...existing, validationSubmitted: true })
       setSubmitted(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al enviar. Intentá de nuevo.')
