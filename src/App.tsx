@@ -8,6 +8,10 @@ import { AcademicValidation } from './pages/AcademicValidation'
 import { LinkRiot } from './pages/LinkRiot'
 import { Success } from './pages/Success'
 import { Dashboard } from './pages/Dashboard'
+import { Tournaments } from './pages/Tournaments'
+import { TournamentDetail } from './pages/TournamentDetail'
+import { CreateTournament } from './pages/CreateTournament'
+import { MyTournaments } from './pages/MyTournaments'
 
 export function App() {
   return (
@@ -26,6 +30,10 @@ export function App() {
 
         {/* App */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/tournaments" element={<ProtectedRoute><Tournaments /></ProtectedRoute>} />
+        <Route path="/tournaments/create" element={<ProtectedRoute><CreateTournament /></ProtectedRoute>} />
+        <Route path="/tournaments/:id" element={<ProtectedRoute><TournamentDetail /></ProtectedRoute>} />
+        <Route path="/my-tournaments" element={<ProtectedRoute><MyTournaments /></ProtectedRoute>} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

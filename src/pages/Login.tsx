@@ -33,6 +33,7 @@ export function Login() {
         isEmailConfirmed: res.isEmailConfirmed ?? existing?.isEmailConfirmed ?? false,
         isRiotLinked: res.isRiotLinked ?? existing?.isRiotLinked ?? false,
         isValidated: res.isValidated ?? existing?.isValidated ?? false,
+        validationSubmitted: existing?.validationSubmitted ?? false,
       })
       navigate('/dashboard')
     } catch (err) {

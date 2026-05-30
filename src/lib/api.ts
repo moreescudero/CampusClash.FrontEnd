@@ -1,3 +1,5 @@
+import { normalizeGame, normalizeStatus, Tournament, EnrollResponse, OrganizerRequestResponse } from '../types/tournament'
+
 const BASE = '/api'
 
 const TOKEN_KEY = 'cc_token'
@@ -36,6 +38,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
 
   return res.json() as Promise<T>
+}
+
+function normalizeTournament(t: Tournament): Tournament {
+  return {
+    ...t,
+    game: normalizeGame(t.game as unknown as string),
+    status: normalizeStatus(t.status as unknown as string),
+  }
 }
 
 export const api = {
@@ -80,6 +90,61 @@ export const api = {
 
   linkRiot(data: { summonerName: string; region: string }) {
     return request<{ message: string }>('/Riot/link', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  // ── Tournaments ─────────────────────────────────────────────────────────────
+
+  getTournaments() {
+    return request<Tournament[]>('/Tournament')
+      .then((ts) => ts.map(normalizeTournament))
+  },
+
+  getTournament(id: string) {
+    return request<Tournament>(`/Tournament/${id}`)
+      .then(normalizeTournament)
+  },
+
+  getMyTournaments() {
+    return request<Tournament[]>('/Tournament/my')
+      .then((ts) => ts.map(normalizeTournament))
+  },
+
+  enrollTournament(id: string) {
+    return request<EnrollResponse>(`/Tournament/${id}/enroll`, {
+      method: 'POST',
+    })
+  },
+
+  updateTournament(id: string, data: {
+    name: string
+    startDate: string
+    game: 0 | 1 | 2
+    description: string
+    isInterUniversity: boolean
+    universityId: string | null
+    maxTeams: number
+  }) {
+    return request<Tournament>(`/Tournament/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  },
+
+  // ── Organizer Request ────────────────────────────────────────────────────────
+
+  createOrganizerRequest(data: {
+    tournamentName: string
+    startDate: string
+    game: 0 | 1 | 2
+    description: string
+    isInterUniversity: boolean
+    universityId: string | null
+    maxTeams: number
+  }) {
+    return request<OrganizerRequestResponse>('/OrganizerRequest', {
       method: 'POST',
       body: JSON.stringify(data),
     })
