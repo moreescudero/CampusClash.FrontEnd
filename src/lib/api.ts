@@ -1,6 +1,6 @@
 import { normalizeGame, normalizeStatus, Tournament, EnrollResponse, OrganizerRequestResponse } from '../types/tournament'
 
-const BASE = '/api'
+const BASE = (import.meta.env.VITE_API_URL ?? '') + '/api'
 
 const TOKEN_KEY = 'cc_token'
 
