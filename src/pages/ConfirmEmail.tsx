@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { OnboardingLayout } from '../components/OnboardingLayout'
 import { Button } from '../components/ui/Button'
+import { getProfile, setProfile } from '../lib/auth'
 
 export function ConfirmEmail() {
   const navigate = useNavigate()
@@ -50,7 +51,11 @@ export function ConfirmEmail() {
 
         <div className="flex flex-col w-full gap-3 mt-2">
           {/* Placeholder: go to next step directly */}
-          <Button size="lg" onClick={() => navigate('/validation')}>
+          <Button size="lg" onClick={() => {
+            const existing = getProfile()
+            if (existing) setProfile({ ...existing, isEmailConfirmed: true })
+            navigate('/validation')
+          }}>
             Ya confirmé mi email
           </Button>
           <Button variant="ghost" size="lg" onClick={handleResend}>

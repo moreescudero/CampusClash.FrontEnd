@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { getProfile, getInitials } from '../lib/auth'
+import { getProfile, getInitials, UserProfile } from '../lib/auth'
 import { MainLayout } from '../components/MainLayout'
 import { TournamentCard } from '../components/TournamentCard'
 import { api } from '../lib/api'
@@ -152,24 +152,32 @@ function FeaturedCarousel() {
   )
 }
 
-const STATUS_ITEMS = [
+type StepState = 'done' | 'review' | 'pending'
+
+const STEPS = [
   {
-    key: 'isEmailConfirmed' as const,
-    label: 'Email confirmado',
-    pending: 'Confirmá tu email',
+    id: 'email',
+    doneLabel: 'Email confirmado',
+    reviewLabel: null,
+    pendingLabel: 'Confirmá tu email',
     path: '/confirm-email',
+    getState: (p: UserProfile): StepState => p.isEmailConfirmed ? 'done' : 'pending',
   },
   {
-    key: 'isValidated' as const,
-    label: 'Validación académica',
-    pending: 'Pendiente de aprobación',
+    id: 'validation',
+    doneLabel: 'Validación aprobada',
+    reviewLabel: 'Constancia en revisión',
+    pendingLabel: 'Validá tu cuenta',
     path: '/validation',
+    getState: (p: UserProfile): StepState => p.isValidated ? 'done' : p.validationSubmitted ? 'review' : 'pending',
   },
   {
-    key: 'isRiotLinked' as const,
-    label: 'Cuenta Riot vinculada',
-    pending: 'Vincular cuenta',
+    id: 'riot',
+    doneLabel: 'Cuenta Riot vinculada',
+    reviewLabel: null,
+    pendingLabel: 'Vincular cuenta Riot',
     path: '/link-riot',
+    getState: (p: UserProfile): StepState => p.isRiotLinked ? 'done' : 'pending',
   },
 ]
 
@@ -196,7 +204,9 @@ export function Dashboard() {
   const displayName = profile?.name || profile?.email?.split('@')[0] || 'Jugador'
   const initials = getInitials(displayName)
 
-  const completedSteps = profile ? STATUS_ITEMS.filter((s) => profile[s.key]).length : 0
+  const stepStates = profile ? STEPS.map((s) => s.getState(profile)) : STEPS.map(() => 'pending' as StepState)
+  const completedSteps = stepStates.filter((s) => s === 'done').length
+  const inProgressSteps = stepStates.filter((s) => s === 'review').length
 
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [loadingTournaments, setLoadingTournaments] = useState(true)
@@ -226,15 +236,22 @@ export function Dashboard() {
           {completedSteps < 3 && (
             <div className="flex items-center gap-3 bg-[oklch(17%_0_0)] border border-[oklch(22%_0_0)] rounded-xl px-4 py-2.5">
               <div className="flex gap-1">
-                {[0, 1, 2].map((i) => (
+                {stepStates.map((state, i) => (
                   <div
                     key={i}
-                    className={`h-1.5 w-6 rounded-full ${i < completedSteps ? 'bg-gradient-to-r from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)]' : 'bg-[oklch(24%_0_0)]'}`}
+                    className={`h-1.5 w-6 rounded-full transition-all ${
+                      state === 'done'    ? 'bg-gradient-to-r from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)]' :
+                      state === 'review'  ? 'bg-[oklch(60%_0.18_60)]' :
+                      'bg-[oklch(24%_0_0)]'
+                    }`}
                   />
                 ))}
               </div>
               <span className="text-xs text-[oklch(48%_0_0)]">
-                {completedSteps}/3 pasos completados
+                {completedSteps}/3
+                {inProgressSteps > 0 && (
+                  <span className="text-[oklch(55%_0.15_60)]"> · {inProgressSteps} en revisión</span>
+                )}
               </span>
             </div>
           )}
@@ -245,34 +262,48 @@ export function Dashboard() {
 
         {/* Account status */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {STATUS_ITEMS.map((item) => {
-            const done = profile?.[item.key] ?? false
+          {STEPS.map((step, i) => {
+            const state = stepStates[i]
+            const borderColor = state === 'done' ? 'oklch(35% 0.1 145)' : state === 'review' ? 'oklch(50% 0.15 60 / 0.5)' : 'oklch(22% 0 0)'
+            const topLine = state === 'done' ? 'bg-gradient-to-r from-[oklch(55%_0.2_145)] to-transparent' : state === 'review' ? 'bg-gradient-to-r from-[oklch(60%_0.18_60)] to-transparent' : 'bg-[oklch(22%_0_0)]'
+            const iconBg = state === 'done' ? 'bg-[oklch(55%_0.2_145/0.15)]' : state === 'review' ? 'bg-[oklch(60%_0.18_60/0.12)]' : 'bg-[oklch(20%_0_0)]'
+            const label = state === 'done' ? step.doneLabel : state === 'review' ? (step.reviewLabel ?? step.doneLabel) : step.pendingLabel
+            const labelColor = state === 'done' ? 'text-[oklch(75%_0_0)]' : state === 'review' ? 'text-[oklch(65%_0.15_60)]' : 'text-[oklch(45%_0_0)]'
+
             return (
               <div
-                key={item.key}
-                className="rounded-xl border bg-[oklch(17%_0_0)] overflow-hidden"
-                style={{ borderColor: done ? 'oklch(35% 0.1 145)' : 'oklch(22% 0 0)' }}
+                key={step.id}
+                className="rounded-xl border bg-[oklch(17%_0_0)] overflow-hidden transition-all"
+                style={{ borderColor }}
               >
-                <div className={`h-[2px] ${done ? 'bg-gradient-to-r from-[oklch(55%_0.2_145)] to-transparent' : 'bg-[oklch(22%_0_0)]'}`} />
+                <div className={`h-[2px] ${topLine} transition-all`} />
                 <div className="px-4 py-3 flex items-center gap-3">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${done ? 'bg-[oklch(55%_0.2_145/0.15)]' : 'bg-[oklch(20%_0_0)]'}`}>
-                    {done ? (
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition-all ${iconBg}`}>
+                    {state === 'done' && (
                       <svg viewBox="0 0 12 12" fill="none" className="w-3.5 h-3.5">
                         <path d="M2 6l3 3 5-5" stroke="oklch(64% 0.2 145)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
-                    ) : (
+                    )}
+                    {state === 'review' && (
+                      <svg viewBox="0 0 12 12" fill="none" className="w-3.5 h-3.5">
+                        <circle cx="6" cy="6" r="4.5" stroke="oklch(65% 0.18 60)" strokeWidth="1.3" />
+                        <path d="M6 3.5v3l2 1.2" stroke="oklch(65% 0.18 60)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                    {state === 'pending' && (
                       <svg viewBox="0 0 12 12" fill="none" className="w-3.5 h-3.5">
                         <circle cx="6" cy="6" r="4" stroke="oklch(38% 0 0)" strokeWidth="1.5" />
                       </svg>
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className={`text-xs font-semibold ${done ? 'text-[oklch(75%_0_0)]' : 'text-[oklch(45%_0_0)]'}`}>
-                      {done ? item.label : item.pending}
-                    </p>
-                    {!done && (
+                    <p className={`text-xs font-semibold ${labelColor}`}>{label}</p>
+                    {state === 'review' && (
+                      <p className="text-[10px] text-[oklch(42%_0_0)]">Revisión en ~48hs hábiles</p>
+                    )}
+                    {state === 'pending' && (
                       <Link
-                        to={item.path}
+                        to={step.path}
                         className="text-[10px] text-[oklch(49.1%_0.27_292.581)] hover:text-[oklch(60%_0.25_292.581)] no-underline font-semibold transition-colors"
                       >
                         Completar →
