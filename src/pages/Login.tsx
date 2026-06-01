@@ -30,6 +30,7 @@ export function Login() {
         email: form.email,
         university: existing?.university ?? '',
         faculty: existing?.faculty ?? '',
+        career: existing?.career ?? '',
         isEmailConfirmed: res.isEmailConfirmed ?? existing?.isEmailConfirmed ?? false,
         isRiotLinked: res.isRiotLinked ?? existing?.isRiotLinked ?? false,
         isValidated: res.isValidated ?? existing?.isValidated ?? false,

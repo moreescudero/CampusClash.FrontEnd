@@ -49,7 +49,7 @@ function normalizeTournament(t: Tournament): Tournament {
 }
 
 export const api = {
-  register(data: { name: string; email: string; password: string; university: string; faculty: string }) {
+  register(data: { name: string; email: string; password: string; university: string; faculty: string; career: string }) {
     return request<{ token: string; email: string; isEmailConfirmed: boolean; isRiotLinked: boolean; isValidated: boolean }>('/Auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -65,18 +65,18 @@ export const api = {
 
   requestValidation(data: {
     legajo: string
-    university: string
+    universityId: string
     faculty: string
     career: string
-    year: string
+    year: number
     file: File
   }) {
     const formData = new FormData()
     formData.append('legajo', data.legajo)
-    formData.append('university', data.university)
+    formData.append('university', data.universityId)
     formData.append('faculty', data.faculty)
     formData.append('career', data.career)
-    formData.append('year', data.year)
+    formData.append('year', String(data.year))
     formData.append('file', data.file)
     return request<{ message: string }>('/Validation/request', {
       method: 'POST',
@@ -86,6 +86,10 @@ export const api = {
 
   getValidationStatus() {
     return request<{ status: string }>('/Validation/status')
+  },
+
+  getUniversities() {
+    return request<{ id: string; name: string }[]>('/University')
   },
 
   linkRiot(data: { summonerName: string; region: string }) {

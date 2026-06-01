@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { OnboardingLayout } from '../components/OnboardingLayout'
 import { Input } from '../components/ui/Input'
@@ -6,30 +6,26 @@ import { Button } from '../components/ui/Button'
 import { api, setToken } from '../lib/api'
 import { setProfile } from '../lib/auth'
 
-const UNIVERSITIES = [
-  'UBA – Universidad de Buenos Aires',
-  'UTN – Universidad Tecnológica Nacional',
-  'UADE – Universidad Argentina de la Empresa',
-  'UdeSA – Universidad de San Andrés',
-  'UCA – Universidad Católica Argentina',
-  'UNLP – Universidad Nacional de La Plata',
-  'UNC – Universidad Nacional de Córdoba',
-  'UNSAM – Universidad Nacional de San Martín',
-  'Otra',
-]
-
 export function Register() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [universities, setUniversities] = useState<{ id: string; name: string }[]>([])
   const [form, setForm] = useState({
     name: '',
     email: '',
     password: '',
     confirm: '',
-    university: '',
+    universityId: '',
     faculty: '',
+    career: '',
   })
+
+  useEffect(() => {
+    api.getUniversities()
+      .then(setUniversities)
+      .catch(() => {})
+  }, [])
 
   function set(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -49,21 +45,25 @@ export function Register() {
       return
     }
 
+    const selectedUniversity = universities.find((u) => u.id === form.universityId)
+
     setLoading(true)
     try {
       const res = await api.register({
         name: form.name,
         email: form.email,
         password: form.password,
-        university: form.university,
+        university: selectedUniversity?.name ?? form.universityId,
         faculty: form.faculty,
+        career: form.career,
       })
       setToken(res.token)
       setProfile({
         name: form.name,
         email: form.email,
-        university: form.university,
+        university: selectedUniversity?.name ?? form.universityId,
         faculty: form.faculty,
+        career: form.career,
         isEmailConfirmed: false,
         isRiotLinked: false,
         isValidated: false,
@@ -76,6 +76,8 @@ export function Register() {
       setLoading(false)
     }
   }
+
+  const selectClass = "h-12 rounded-lg bg-[oklch(20%_0_0)] border border-[oklch(26%_0_0)] px-4 text-sm text-[oklch(96%_0_0)] outline-none focus:border-[oklch(49.1%_0.27_292.581)] focus:shadow-[0_0_0_3px_oklch(49.1%_0.27_292.581/0.15)] transition-all"
 
   return (
     <OnboardingLayout
@@ -103,28 +105,41 @@ export function Register() {
           required
         />
 
-        <div className="flex flex-col gap-1">
+        {/* Universidad */}
+        <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold uppercase tracking-widest text-[oklch(50%_0_0)]">Universidad</label>
           <select
-            value={form.university}
-            onChange={set('university')}
+            value={form.universityId}
+            onChange={set('universityId')}
             required
-            className="h-12 rounded-lg bg-[oklch(20%_0_0)] border border-[oklch(26%_0_0)] px-4 text-sm text-[oklch(96%_0_0)] outline-none focus:border-[oklch(49.1%_0.27_292.581)] focus:shadow-[0_0_0_3px_oklch(49.1%_0.27_292.581/0.15)] transition-all"
+            className={selectClass}
           >
-            <option value="" disabled>Seleccioná tu universidad</option>
-            {UNIVERSITIES.map((u) => (
-              <option key={u} value={u}>{u}</option>
+            <option value="" disabled>
+              {universities.length === 0 ? 'Cargando universidades…' : 'Seleccioná tu universidad'}
+            </option>
+            {universities.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
             ))}
           </select>
         </div>
 
-        <Input
-          label="Facultad / Carrera"
-          placeholder="Ej: Ingeniería en Sistemas"
-          value={form.faculty}
-          onChange={set('faculty')}
-          required
-        />
+        {/* Facultad y Carrera en grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Facultad"
+            placeholder="Ej: Ingeniería"
+            value={form.faculty}
+            onChange={set('faculty')}
+            required
+          />
+          <Input
+            label="Carrera"
+            placeholder="Ej: Sistemas"
+            value={form.career}
+            onChange={set('career')}
+            required
+          />
+        </div>
 
         <Input
           label="Contraseña"

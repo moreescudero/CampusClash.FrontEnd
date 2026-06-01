@@ -1,4 +1,4 @@
-import { ChangeEvent, DragEvent, FormEvent, useRef, useState } from 'react'
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { OnboardingLayout } from '../components/OnboardingLayout'
 import { Input } from '../components/ui/Input'
@@ -6,7 +6,14 @@ import { Button } from '../components/ui/Button'
 import { api } from '../lib/api'
 import { getProfile, setProfile } from '../lib/auth'
 
-const YEARS = ['1°', '2°', '3°', '4°', '5°', 'Graduado/a']
+const YEARS: { value: number; label: string }[] = [
+  { value: 1, label: '1° año' },
+  { value: 2, label: '2° año' },
+  { value: 3, label: '3° año' },
+  { value: 4, label: '4° año' },
+  { value: 5, label: '5° año' },
+  { value: 6, label: 'Graduado/a' },
+]
 
 const ACCEPTED = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
 const MAX_MB = 5
@@ -26,17 +33,28 @@ export function AcademicValidation() {
   const [dragging, setDragging] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [file, setFile] = useState<File | null>(null)
+  const [universities, setUniversities] = useState<{ id: string; name: string }[]>([])
   const [form, setForm] = useState({
     legajo: '',
-    university: '',
+    universityId: '',
     faculty: '',
     career: '',
-    year: '',
+    year: 0,
   })
+
+  useEffect(() => {
+    api.getUniversities()
+      .then(setUniversities)
+      .catch(() => {})
+  }, [])
 
   function set(field: keyof typeof form) {
     return (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [field]: e.target.value }))
+  }
+
+  function setYear(e: ChangeEvent<HTMLSelectElement>) {
+    setForm((f) => ({ ...f, year: Number(e.target.value) }))
   }
 
   function validateFile(f: File): boolean {
@@ -68,9 +86,17 @@ export function AcademicValidation() {
     e.preventDefault()
     setError('')
     if (!file) { setFileError('Tenés que adjuntar la constancia.'); return }
+    if (!form.year) { setError('Seleccioná el año de cursada.'); return }
     setLoading(true)
     try {
-      await api.requestValidation({ ...form, file })
+      await api.requestValidation({
+        legajo: form.legajo,
+        universityId: form.universityId,
+        faculty: form.faculty,
+        career: form.career,
+        year: form.year,
+        file,
+      })
       const existing = getProfile()
       if (existing) setProfile({ ...existing, validationSubmitted: true })
       setSubmitted(true)
@@ -80,6 +106,11 @@ export function AcademicValidation() {
       setLoading(false)
     }
   }
+
+  const selectClass = "h-12 rounded-lg bg-[oklch(20%_0_0)] border border-[oklch(26%_0_0)] px-4 text-sm text-[oklch(96%_0_0)] outline-none focus:border-[oklch(49.1%_0.27_292.581)] focus:shadow-[0_0_0_3px_oklch(49.1%_0.27_292.581/0.15)] transition-all"
+
+  const selectedUniversity = universities.find((u) => u.id === form.universityId)
+  const selectedYear = YEARS.find((y) => y.value === form.year)
 
   if (submitted) {
     return (
@@ -108,10 +139,10 @@ export function AcademicValidation() {
           <div className="w-full bg-[oklch(20%_0_0)] border border-[oklch(24%_0_0)] rounded-xl p-4 text-left space-y-2">
             {[
               { label: 'Legajo', value: form.legajo },
-              { label: 'Universidad', value: form.university },
+              { label: 'Universidad', value: selectedUniversity?.name ?? form.universityId },
               { label: 'Facultad', value: form.faculty },
               { label: 'Carrera', value: form.career },
-              { label: 'Año', value: form.year },
+              { label: 'Año', value: selectedYear?.label ?? String(form.year) },
             ].map(({ label, value }) => (
               <div key={label} className="flex justify-between gap-4">
                 <span className="text-xs text-[oklch(40%_0_0)] uppercase tracking-widest font-semibold">{label}</span>
@@ -154,23 +185,38 @@ export function AcademicValidation() {
         </div>
 
         <Input label="Legajo / Padrón" placeholder="Ej: 12345678" value={form.legajo} onChange={set('legajo')} required />
-        <Input label="Universidad" placeholder="Ej: UBA" value={form.university} onChange={set('university')} required />
+
+        {/* Universidad select */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-semibold uppercase tracking-widest text-[oklch(50%_0_0)]">Universidad</label>
+          <select value={form.universityId} onChange={set('universityId')} required className={selectClass}>
+            <option value="" disabled>
+              {universities.length === 0 ? 'Cargando universidades…' : 'Seleccioná tu universidad'}
+            </option>
+            {universities.map((u) => (
+              <option key={u.id} value={u.id}>{u.name}</option>
+            ))}
+          </select>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <Input label="Facultad" placeholder="Ej: FIUBA" value={form.faculty} onChange={set('faculty')} required />
           <Input label="Carrera" placeholder="Ej: Ingeniería en Sistemas" value={form.career} onChange={set('career')} required />
         </div>
 
+        {/* Año como número */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold uppercase tracking-widest text-[oklch(50%_0_0)]">Año de cursada</label>
           <select
-            value={form.year}
-            onChange={set('year')}
+            value={form.year || ''}
+            onChange={setYear}
             required
-            className="h-12 rounded-lg bg-[oklch(20%_0_0)] border border-[oklch(26%_0_0)] px-4 text-sm text-[oklch(96%_0_0)] outline-none focus:border-[oklch(49.1%_0.27_292.581)] focus:shadow-[0_0_0_3px_oklch(49.1%_0.27_292.581/0.15)] transition-all"
+            className={selectClass}
           >
             <option value="" disabled>Seleccioná el año</option>
-            {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+            {YEARS.map((y) => (
+              <option key={y.value} value={y.value}>{y.label}</option>
+            ))}
           </select>
         </div>
 

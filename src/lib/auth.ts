@@ -5,6 +5,7 @@ export interface UserProfile {
   email: string
   university: string
   faculty: string
+  career: string
   isEmailConfirmed: boolean
   isRiotLinked: boolean
   isValidated: boolean
