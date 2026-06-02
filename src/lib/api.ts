@@ -85,7 +85,7 @@ export const api = {
   },
 
   getValidationStatus() {
-    return request<{ status: string }>('/Validation/status')
+    return request<{ status: string | number }>('/Validation/status')
   },
 
   getUniversities() {

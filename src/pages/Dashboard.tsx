@@ -225,11 +225,11 @@ export function Dashboard() {
     if (profile?.isValidated) return
     api.getValidationStatus()
       .then(({ status }) => {
-        const s = status.toLowerCase()
+        const s = String(status).toLowerCase()
         const updated = {
           ...profile!,
           validationSubmitted: true,
-          isValidated: s === 'approved',
+          isValidated: s === '1' || s === 'approved',
         }
         setProfile(updated)
         setProfileState(updated)
