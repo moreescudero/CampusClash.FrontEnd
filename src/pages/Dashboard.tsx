@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { getProfile, getInitials, UserProfile } from '../lib/auth'
+import { getProfile, setProfile, getInitials, UserProfile } from '../lib/auth'
 import { MainLayout } from '../components/MainLayout'
 import { TournamentCard } from '../components/TournamentCard'
 import { api } from '../lib/api'
@@ -200,7 +200,7 @@ function SkeletonCard() {
 }
 
 export function Dashboard() {
-  const profile = getProfile()
+  const [profile, setProfileState] = useState(getProfile)
   const displayName = profile?.name || profile?.email?.split('@')[0] || 'Jugador'
   const initials = getInitials(displayName)
 
@@ -216,6 +216,25 @@ export function Dashboard() {
       .then((data) => setTournaments(data.slice(0, 3)))
       .catch(() => {})
       .finally(() => setLoadingTournaments(false))
+  }, [])
+
+  // Consulta el estado de validación siempre que no esté aprobado aún.
+  // Si la API responde, también marcamos validationSubmitted por si el flag
+  // nunca se guardó localmente (ej. error de red al momento de enviar).
+  useEffect(() => {
+    if (profile?.isValidated) return
+    api.getValidationStatus()
+      .then(({ status }) => {
+        const s = status.toLowerCase()
+        const updated = {
+          ...profile!,
+          validationSubmitted: true,
+          isValidated: s === 'approved',
+        }
+        setProfile(updated)
+        setProfileState(updated)
+      })
+      .catch(() => {})
   }, [])
 
   return (
