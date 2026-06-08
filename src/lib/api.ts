@@ -45,6 +45,13 @@ function normalizeTournament(t: Tournament): Tournament {
     ...t,
     game: normalizeGame(t.game as unknown as string),
     status: normalizeStatus(t.status as unknown as string),
+    teams: (t.teams ?? []).map((team) => ({
+      ...team,
+      players: (team.players ?? []).map((p) => ({
+        ...p,
+        username: (p as unknown as Record<string, string>).userName ?? p.username ?? '',
+      })),
+    })),
   }
 }
 
