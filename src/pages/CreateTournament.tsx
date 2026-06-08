@@ -4,8 +4,7 @@ import { MainLayout } from '../components/MainLayout'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { api } from '../lib/api'
-import { OrganizerRequestResponse, GAME_CONFIG, formatDate } from '../types/tournament'
-
+import { OrganizerRequestResponse, GAME_CONFIG, formatDate, normalizeGame} from '../types/tournament'
 const GAMES = [
   { value: 0 as const, key: 'leagueoflegends' as const },
   { value: 1 as const, key: 'valorant' as const },
@@ -183,7 +182,7 @@ export function CreateTournament() {
 }
 
 function SuccessScreen({ request, onDone }: { request: OrganizerRequestResponse; onDone: () => void }) {
-  const game = GAME_CONFIG[request.game]
+  const game = GAME_CONFIG[normalizeGame(request.game)]
   return (
     <MainLayout>
       <div className="max-w-md mx-auto px-6 py-16 flex flex-col items-center text-center">

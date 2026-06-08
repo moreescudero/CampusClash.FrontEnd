@@ -122,6 +122,12 @@ export const api = {
     })
   },
 
+  leaveTournament(id: string) {
+    return request<{ message: string }>(`/Tournament/${id}/enroll`, {
+      method: 'DELETE',
+    })
+  },
+
   updateTournament(id: string, data: {
     name: string
     startDate: string

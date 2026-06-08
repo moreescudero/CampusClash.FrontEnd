@@ -63,6 +63,7 @@ export function TournamentDetail() {
   const [enrolling, setEnrolling] = useState(false)
   const [enrollError, setEnrollError] = useState('')
   const [enrollSuccess, setEnrollSuccess] = useState('')
+  const [leaving, setLeaving] = useState(false)
 
   const profile = getProfile()
 
@@ -87,6 +88,31 @@ export function TournamentDetail() {
       setEnrollError(err instanceof Error ? err.message : 'No se pudo inscribir')
     } finally {
       setEnrolling(false)
+    }
+  }
+
+  async function handleLeave() {
+    if (!id) return
+
+    setEnrollError('')
+    setEnrollSuccess('')
+    setLeaving(true)
+
+    try {
+      const res = await api.leaveTournament(id)
+
+      setEnrollSuccess(res.message)
+
+      const updated = await api.getTournament(id)
+      setTournament(updated)
+    } catch (err) {
+      setEnrollError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo dar de baja'
+      )
+    } finally {
+      setLeaving(false)
     }
   }
 
@@ -154,13 +180,29 @@ export function TournamentDetail() {
               </div>
 
               {canEnroll && (
-                <div className="shrink-0">
+                <div className="shrink-0 flex gap-2">
                   <button
                     onClick={handleEnroll}
                     disabled={enrolling}
-                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)] text-white text-sm font-semibold hover:opacity-90 active:scale-[0.97] transition-all disabled:opacity-50 cursor-pointer shadow-[0_4px_20px_oklch(49.1%_0.27_292.581/0.35)]"
+                    className="px-6 py-2.5 rounded-xl font-semibold text-sm text-white
+                      bg-gradient-to-r from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)]
+                      hover:opacity-90 active:scale-95 transition-all duration-150
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                      shadow-lg shadow-[oklch(47%_0.28_283)]/30"
                   >
                     {enrolling ? 'Inscribiendo...' : 'Inscribirme'}
+                  </button>
+
+                  <button
+                    onClick={handleLeave}
+                    disabled={leaving}
+                    className="px-6 py-2.5 rounded-xl font-semibold text-sm text-white
+                      bg-gradient-to-r from-[oklch(45%_0.22_25)] to-[oklch(52%_0.25_15)]
+                      hover:opacity-90 active:scale-95 transition-all duration-150
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                      shadow-lg shadow-[oklch(45%_0.22_25)]/30"
+                  >
+                    {leaving ? 'Procesando...' : 'Darse de baja'}
                   </button>
                 </div>
               )}
