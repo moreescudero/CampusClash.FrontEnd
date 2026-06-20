@@ -41,12 +41,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 function normalizeBracket(raw: unknown): Bracket {
-  // Handle: array of matches directly
-  if (Array.isArray(raw)) return { matches: raw }
   const obj = raw as Record<string, unknown>
-  // Handle: { matches: [...] } or { rounds: [...] } or { data: [...] }
-  const list = (obj.matches ?? obj.rounds ?? obj.data ?? []) as Bracket['matches']
-  return { matches: Array.isArray(list) ? list : [] }
+  const rounds = obj.rounds
+  return { rounds: Array.isArray(rounds) ? (rounds as Bracket['rounds']) : [] }
 }
 
 function normalizeTournament(t: Tournament): Tournament {

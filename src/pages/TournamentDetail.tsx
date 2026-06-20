@@ -2,7 +2,7 @@ import { useEffect, useState, Fragment } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { MainLayout } from '../components/MainLayout'
 import { api } from '../lib/api'
-import { Tournament, GAME_CONFIG, STATUS_CONFIG, formatDate, Bracket, BracketMatch, BracketTeam } from '../types/tournament'
+import { Tournament, GAME_CONFIG, STATUS_CONFIG, formatDate, Bracket, BracketMatchEntry } from '../types/tournament'
 import { getProfile } from '../lib/auth'
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -63,17 +63,7 @@ function TeamCard({ team }: TeamCardProps) {
 
 const SLOT_UNIT = 88  // base slot height: card (~72px) + gap (16px)
 
-function getRoundLabel(roundIndex: number, totalRounds: number): string {
-  const pos = totalRounds - roundIndex
-  if (pos === 1) return 'Final'
-  if (pos === 2) return 'Semifinal'
-  if (pos === 3) return '4tos de Final'
-  if (pos === 4) return '8vos de Final'
-  if (pos === 5) return '16vos de Final'
-  return `Ronda ${roundIndex + 1}`
-}
-
-function BracketTeamRow({ team, isWinner }: { team: BracketTeam | null; isWinner: boolean }) {
+function BracketTeamRow({ name, isWinner }: { name: string | null; isWinner: boolean }) {
   return (
     <div className={`flex items-center gap-2 px-3 py-2.5 transition-colors ${
       isWinner ? 'bg-[oklch(49.1%_0.27_292.581/0.1)]' : ''
@@ -83,23 +73,18 @@ function BracketTeamRow({ team, isWinner }: { team: BracketTeam | null; isWinner
           ? 'bg-[oklch(58%_0.27_292.581)] shadow-[0_0_6px_oklch(58%_0.27_292.581/0.9)]'
           : 'bg-[oklch(22%_0_0)]'
       }`} />
-      <div className="min-w-0 flex-1">
-        <p className={`text-xs font-semibold truncate leading-tight ${
-          isWinner ? 'text-white' : team ? 'text-[oklch(58%_0_0)]' : 'text-[oklch(26%_0_0)]'
-        }`}>
-          {team?.name ?? 'Por definir'}
-        </p>
-        {team && (
-          <p className="text-[10px] text-[oklch(33%_0_0)] truncate">{team.universityName}</p>
-        )}
-      </div>
+      <p className={`text-xs font-semibold truncate leading-tight ${
+        isWinner ? 'text-white' : name ? 'text-[oklch(58%_0_0)]' : 'text-[oklch(26%_0_0)]'
+      }`}>
+        {name ?? 'Por definir'}
+      </p>
     </div>
   )
 }
 
-function BracketMatchCard({ match }: { match: BracketMatch }) {
-  const t1Won = !!match.winnerId && match.team1?.id === match.winnerId
-  const t2Won = !!match.winnerId && match.team2?.id === match.winnerId
+function BracketMatchCard({ match }: { match: BracketMatchEntry }) {
+  const aWon = !!match.winnerId && match.teamAId === match.winnerId
+  const bWon = !!match.winnerId && match.teamBId === match.winnerId
 
   return (
     <div className={`w-52 rounded-xl overflow-hidden border transition-all ${
@@ -107,28 +92,13 @@ function BracketMatchCard({ match }: { match: BracketMatch }) {
         ? 'border-[oklch(49.1%_0.27_292.581/0.35)] shadow-[0_0_18px_oklch(49.1%_0.27_292.581/0.08)]'
         : 'border-[oklch(23%_0_0)]'
     } bg-[oklch(15.5%_0_0)]`}>
-      <BracketTeamRow team={match.team1} isWinner={t1Won} />
+      <BracketTeamRow name={match.teamAName} isWinner={aWon} />
       <div className="h-px bg-[oklch(20%_0_0)]" />
-      <BracketTeamRow team={match.team2} isWinner={t2Won} />
+      <BracketTeamRow name={match.teamBName} isWinner={bWon} />
     </div>
   )
 }
 
-function PlaceholderMatchCard() {
-  return (
-    <div className="w-52 rounded-xl overflow-hidden border border-[oklch(19%_0_0)] bg-[oklch(14%_0_0)] opacity-30">
-      {[0, 1].map((i) => (
-        <Fragment key={i}>
-          {i === 1 && <div className="h-px bg-[oklch(17%_0_0)]" />}
-          <div className="px-3 py-2.5 flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-[oklch(20%_0_0)] shrink-0" />
-            <div className="h-2.5 w-24 rounded bg-[oklch(20%_0_0)]" />
-          </div>
-        </Fragment>
-      ))}
-    </div>
-  )
-}
 
 function BracketConnector({ pairCount, slotH }: { pairCount: number; slotH: number }) {
   const armH = slotH / 2
@@ -159,54 +129,37 @@ function BracketConnector({ pairCount, slotH }: { pairCount: number; slotH: numb
   )
 }
 
-function BracketView({ bracket, maxTeams }: { bracket: Bracket; maxTeams: number }) {
-  const safeTeams = Math.max(2, maxTeams)
-  const totalRounds = Math.round(Math.log2(safeTeams))
-  const matches = Array.isArray(bracket.matches) ? bracket.matches : []
-
-  const byRound: Record<number, BracketMatch[]> = {}
-  for (const m of matches) {
-    if (!m || typeof m !== 'object') continue
-    const round = Number((m as BracketMatch).round ?? 1)
-    if (!byRound[round]) byRound[round] = []
-    byRound[round].push(m as BracketMatch)
-  }
-  for (const r in byRound) {
-    byRound[Number(r)].sort((a, b) => (a.matchIndex ?? 0) - (b.matchIndex ?? 0))
-  }
-
-  const rounds = Array.from({ length: totalRounds }, (_, i) => byRound[i + 1] ?? [])
+function BracketView({ bracket }: { bracket: Bracket }) {
+  const rounds = bracket.rounds ?? []
+  const totalRounds = rounds.length
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-[oklch(19%_0_0)] bg-[oklch(12.5%_0_0)] p-6">
       <div className="flex items-start gap-0 min-w-max">
-        {rounds.map((matches, ri) => {
+        {rounds.map((round, ri) => {
           const slotH = SLOT_UNIT * Math.pow(2, ri)
-          const matchCount = maxTeams / Math.pow(2, ri + 1)
+          const matches = round.matches ?? []
 
           return (
             <Fragment key={ri}>
               <div style={{ width: '208px' }}>
-                {/* Round label */}
+                {/* Round label from backend */}
                 <div style={{ height: '28px' }} className="flex items-center justify-center">
                   <span className="text-[9px] font-black uppercase tracking-[0.16em] text-transparent bg-clip-text bg-gradient-to-r from-[oklch(58%_0.27_292.581)] to-[oklch(62%_0.22_310)]">
-                    {getRoundLabel(ri, totalRounds)}
+                    {round.roundName}
                   </span>
                 </div>
 
-                {/* Match slots */}
-                {Array.from({ length: matchCount }).map((_, mi) => {
-                  const match = matches[mi]
-                  return (
-                    <div key={mi} style={{ height: `${slotH}px` }} className="flex items-center">
-                      {match ? <BracketMatchCard match={match} /> : <PlaceholderMatchCard />}
-                    </div>
-                  )
-                })}
+                {/* One slot per match */}
+                {matches.map((match, mi) => (
+                  <div key={match.id ?? mi} style={{ height: `${slotH}px` }} className="flex items-center">
+                    <BracketMatchCard match={match} />
+                  </div>
+                ))}
               </div>
 
               {ri < totalRounds - 1 && (
-                <BracketConnector pairCount={matchCount / 2} slotH={slotH} />
+                <BracketConnector pairCount={Math.max(1, Math.floor(matches.length / 2))} slotH={slotH} />
               )}
             </Fragment>
           )
@@ -543,7 +496,7 @@ export function TournamentDetail() {
               </div>
             </div>
           ) : bracket ? (
-            <BracketView bracket={bracket} maxTeams={tournament.maxTeams} />
+            <BracketView bracket={bracket} />
           ) : (
             <div className="rounded-2xl border border-[oklch(19%_0_0)] bg-[oklch(12.5%_0_0)] p-12 flex flex-col items-center text-center gap-3">
               <div className="w-12 h-12 rounded-xl border border-[oklch(24%_0_0)] bg-[oklch(16%_0_0)] flex items-center justify-center">

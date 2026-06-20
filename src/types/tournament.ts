@@ -106,23 +106,25 @@ export function normalizeStatus(raw: string | number): TournamentStatus {
   return 'open'
 }
 
-export interface BracketTeam {
+export interface BracketMatchEntry {
   id: string
-  name: string
-  universityName: string
+  matchNumber: number
+  teamAId: string | null
+  teamAName: string | null
+  teamBId: string | null
+  teamBName: string | null
+  winnerId: string | null
+  winnerName: string | null
 }
 
-export interface BracketMatch {
-  id: string
+export interface BracketRound {
   round: number
-  matchIndex: number
-  team1: BracketTeam | null
-  team2: BracketTeam | null
-  winnerId: string | null
+  roundName: string
+  matches: BracketMatchEntry[]
 }
 
 export interface Bracket {
-  matches: BracketMatch[]
+  rounds: BracketRound[]
 }
 
 export function formatDate(iso: string): string {
