@@ -1,6 +1,7 @@
 import { getToken, clearToken } from './api'
 
 export interface UserProfile {
+  username: string
   name: string
   email: string
   university: string

@@ -59,6 +59,7 @@ export function Register() {
       })
       setToken(res.token)
       setProfile({
+        username: res.username ?? form.name,
         name: form.name,
         email: form.email,
         university: selectedUniversity?.name ?? form.universityId,

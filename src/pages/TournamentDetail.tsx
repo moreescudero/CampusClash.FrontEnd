@@ -320,7 +320,7 @@ export function TournamentDetail() {
   const game = GAME_CONFIG[tournament.game]
   const status = STATUS_CONFIG[tournament.status]
   const canEnroll = tournament.status === 'open' && profile?.isValidated
-  const isOrganizer = profile?.name === tournament.organizerUsername
+  const isOrganizer = profile?.username === tournament.organizerUsername
   const isFull = tournament.teams.length >= tournament.maxTeams
   const canGenerateBracket = isOrganizer && isFull && !bracket && !bracketLoading
 

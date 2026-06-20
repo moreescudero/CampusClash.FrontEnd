@@ -57,14 +57,14 @@ function normalizeTournament(t: Tournament): Tournament {
 
 export const api = {
   register(data: { name: string; email: string; password: string; university: string; faculty: string; career: string }) {
-    return request<{ token: string; email: string; isEmailConfirmed: boolean; isRiotLinked: boolean; isValidated: boolean }>('/Auth/register', {
+    return request<{ token: string; username: string; email: string; isEmailConfirmed: boolean; isRiotLinked: boolean; isValidated: boolean }>('/Auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     })
   },
 
   login(data: { email: string; password: string }) {
-    return request<{ token: string; isEmailConfirmed: boolean; isRiotLinked: boolean; isValidated: boolean }>('/Auth/login', {
+    return request<{ token: string; username: string; isEmailConfirmed: boolean; isRiotLinked: boolean; isValidated: boolean }>('/Auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
     })

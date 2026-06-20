@@ -26,6 +26,7 @@ export function Login() {
       // Preserve existing profile data, only update what login returns
       const existing = getProfile()
       setProfile({
+        username: res.username ?? existing?.username ?? '',
         name: existing?.name ?? '',
         email: form.email,
         university: existing?.university ?? '',
