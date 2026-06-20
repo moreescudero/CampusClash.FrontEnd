@@ -1,4 +1,4 @@
-import { normalizeGame, normalizeStatus, Tournament, EnrollResponse, OrganizerRequestResponse } from '../types/tournament'
+import { normalizeGame, normalizeStatus, Tournament, EnrollResponse, OrganizerRequestResponse, Bracket } from '../types/tournament'
 
 const BASE = (import.meta.env.VITE_API_URL ?? '') + '/api'
 
@@ -148,6 +148,14 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     })
+  },
+
+  generateBracket(id: string) {
+    return request<Bracket>(`/tournament/${id}/bracket`, { method: 'POST' })
+  },
+
+  getBracket(id: string) {
+    return request<Bracket>(`/tournament/${id}/bracket`)
   },
 
   // ── Organizer Request ────────────────────────────────────────────────────────

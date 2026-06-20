@@ -42,6 +42,7 @@ export function Tournaments() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filter, setFilter] = useState<GameFilter>('all')
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     api.getTournaments()
@@ -50,9 +51,11 @@ export function Tournaments() {
       .finally(() => setLoading(false))
   }, [])
 
-  const filtered = filter === 'all'
-    ? tournaments
-    : tournaments.filter((t) => t.game === filter)
+  const filtered = tournaments.filter((t) => {
+    const matchesGame = filter === 'all' || t.game === filter
+    const matchesSearch = t.name.toLowerCase().includes(search.toLowerCase())
+    return matchesGame && matchesSearch
+  })
 
   return (
     <MainLayout>
@@ -63,21 +66,49 @@ export function Tournaments() {
           <p className="text-sm text-[oklch(42%_0_0)]">Encontrá torneos y anotate con tu facultad</p>
         </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-1.5 mb-8 flex-wrap">
-          {FILTERS.map(({ value, label }) => (
-            <button
-              key={value}
-              onClick={() => setFilter(value)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer border ${
-                filter === value
-                  ? 'text-white bg-[oklch(49.1%_0.27_292.581/0.15)] border-[oklch(49.1%_0.27_292.581/0.4)]'
-                  : 'text-[oklch(45%_0_0)] bg-transparent border-[oklch(22%_0_0)] hover:text-white hover:border-[oklch(30%_0_0)]'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+        {/* Search + Filters */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-8">
+          {/* Search input */}
+          <div className="relative flex-1 max-w-sm">
+            <svg viewBox="0 0 16 16" fill="none" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[oklch(38%_0_0)] pointer-events-none">
+              <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+              <path d="M10 10l3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Buscar torneo..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-lg bg-[oklch(18%_0_0)] border border-[oklch(24%_0_0)] text-sm text-[oklch(90%_0_0)] placeholder:text-[oklch(36%_0_0)] outline-none focus:border-[oklch(49.1%_0.27_292.581)] focus:shadow-[0_0_0_3px_oklch(49.1%_0.27_292.581/0.12)] transition-all"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[oklch(38%_0_0)] hover:text-white transition-colors cursor-pointer"
+              >
+                <svg viewBox="0 0 10 10" fill="none" className="w-3 h-3">
+                  <path d="M2 2l6 6M8 2L2 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Game filters */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {FILTERS.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => setFilter(value)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer border ${
+                  filter === value
+                    ? 'text-white bg-[oklch(49.1%_0.27_292.581/0.15)] border-[oklch(49.1%_0.27_292.581/0.4)]'
+                    : 'text-[oklch(45%_0_0)] bg-transparent border-[oklch(22%_0_0)] hover:text-white hover:border-[oklch(30%_0_0)]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Error */}
@@ -100,8 +131,10 @@ export function Tournaments() {
                 <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-[oklch(45%_0_0)]">No hay torneos disponibles</p>
-            <p className="text-xs text-[oklch(32%_0_0)] mt-1">Probá cambiando el filtro de juego</p>
+            <p className="text-sm font-semibold text-[oklch(45%_0_0)]">No se encontraron torneos</p>
+            <p className="text-xs text-[oklch(32%_0_0)] mt-1">
+              {search ? `Sin resultados para "${search}"` : 'Probá cambiando el filtro de juego'}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
