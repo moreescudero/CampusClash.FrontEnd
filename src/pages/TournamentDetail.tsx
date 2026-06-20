@@ -160,15 +160,19 @@ function BracketConnector({ pairCount, slotH }: { pairCount: number; slotH: numb
 }
 
 function BracketView({ bracket, maxTeams }: { bracket: Bracket; maxTeams: number }) {
-  const totalRounds = Math.log2(maxTeams)
+  const safeTeams = Math.max(2, maxTeams)
+  const totalRounds = Math.round(Math.log2(safeTeams))
+  const matches = Array.isArray(bracket.matches) ? bracket.matches : []
 
   const byRound: Record<number, BracketMatch[]> = {}
-  for (const m of bracket.matches) {
-    if (!byRound[m.round]) byRound[m.round] = []
-    byRound[m.round].push(m)
+  for (const m of matches) {
+    if (!m || typeof m !== 'object') continue
+    const round = Number((m as BracketMatch).round ?? 1)
+    if (!byRound[round]) byRound[round] = []
+    byRound[round].push(m as BracketMatch)
   }
   for (const r in byRound) {
-    byRound[Number(r)].sort((a, b) => a.matchIndex - b.matchIndex)
+    byRound[Number(r)].sort((a, b) => (a.matchIndex ?? 0) - (b.matchIndex ?? 0))
   }
 
   const rounds = Array.from({ length: totalRounds }, (_, i) => byRound[i + 1] ?? [])

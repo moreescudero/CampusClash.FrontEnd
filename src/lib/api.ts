@@ -40,6 +40,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>
 }
 
+function normalizeBracket(raw: unknown): Bracket {
+  // Handle: array of matches directly
+  if (Array.isArray(raw)) return { matches: raw }
+  const obj = raw as Record<string, unknown>
+  // Handle: { matches: [...] } or { rounds: [...] } or { data: [...] }
+  const list = (obj.matches ?? obj.rounds ?? obj.data ?? []) as Bracket['matches']
+  return { matches: Array.isArray(list) ? list : [] }
+}
+
 function normalizeTournament(t: Tournament): Tournament {
   return {
     ...t,
@@ -151,11 +160,13 @@ export const api = {
   },
 
   generateBracket(id: string) {
-    return request<Bracket>(`/Tournament/${id}/bracket`, { method: 'POST' })
+    return request<unknown>(`/Tournament/${id}/bracket`, { method: 'POST' })
+      .then(normalizeBracket)
   },
 
   getBracket(id: string) {
-    return request<Bracket>(`/Tournament/${id}/bracket`)
+    return request<unknown>(`/Tournament/${id}/bracket`)
+      .then(normalizeBracket)
   },
 
   // ── Organizer Request ────────────────────────────────────────────────────────
