@@ -503,27 +503,65 @@ export function TournamentDetail() {
           </div>
         </div>
 
-        {/* Bracket */}
-        {bracket && (
-          <div className="mt-12">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="h-px flex-1 bg-[oklch(20%_0_0)]" />
-              <div className="flex items-center gap-2.5">
-                <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4 text-[oklch(49.1%_0.27_292.581)]">
-                  <rect x="1" y="1" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" />
-                  <rect x="1" y="11" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" />
-                  <rect x="11" y="5" width="4" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" />
-                  <path d="M5 3h3M5 13h3M8 3v10M8 8h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                </svg>
-                <span className="text-sm font-black uppercase tracking-[0.14em] text-transparent bg-clip-text bg-gradient-to-r from-[oklch(55%_0.27_292.581)] to-[oklch(65%_0.22_310)]">
-                  Bracket
-                </span>
-              </div>
-              <div className="h-px flex-1 bg-[oklch(20%_0_0)]" />
+        {/* Bracket — always visible */}
+        <div className="mt-12">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-px flex-1 bg-[oklch(20%_0_0)]" />
+            <div className="flex items-center gap-2.5">
+              <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4 text-[oklch(49.1%_0.27_292.581)]">
+                <rect x="1" y="1" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                <rect x="1" y="11" width="4" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                <rect x="11" y="5" width="4" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                <path d="M5 3h3M5 13h3M8 3v10M8 8h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              </svg>
+              <span className="text-sm font-black uppercase tracking-[0.14em] text-transparent bg-clip-text bg-gradient-to-r from-[oklch(55%_0.27_292.581)] to-[oklch(65%_0.22_310)]">
+                Bracket
+              </span>
             </div>
-            <BracketView bracket={bracket} maxTeams={tournament.maxTeams} />
+            <div className="h-px flex-1 bg-[oklch(20%_0_0)]" />
           </div>
-        )}
+
+          {bracketLoading ? (
+            <div className="rounded-2xl border border-[oklch(19%_0_0)] bg-[oklch(12.5%_0_0)] p-6 animate-pulse">
+              <div className="flex gap-6">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex flex-col gap-4">
+                    <div className="h-3 w-20 rounded bg-[oklch(20%_0_0)] mx-auto" />
+                    {Array.from({ length: Math.pow(2, 3 - i) }).map((_, j) => (
+                      <div key={j} className="w-52 rounded-xl bg-[oklch(17%_0_0)] overflow-hidden">
+                        <div className="px-3 py-2.5"><div className="h-2.5 w-28 rounded bg-[oklch(22%_0_0)]" /></div>
+                        <div className="h-px bg-[oklch(20%_0_0)]" />
+                        <div className="px-3 py-2.5"><div className="h-2.5 w-24 rounded bg-[oklch(22%_0_0)]" /></div>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : bracket ? (
+            <BracketView bracket={bracket} maxTeams={tournament.maxTeams} />
+          ) : (
+            <div className="rounded-2xl border border-[oklch(19%_0_0)] bg-[oklch(12.5%_0_0)] p-12 flex flex-col items-center text-center gap-3">
+              <div className="w-12 h-12 rounded-xl border border-[oklch(24%_0_0)] bg-[oklch(16%_0_0)] flex items-center justify-center">
+                <svg viewBox="0 0 20 20" fill="none" className="w-5 h-5 text-[oklch(32%_0_0)]">
+                  <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                  <rect x="1" y="14" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                  <rect x="14" y="7" width="5" height="6" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                  <path d="M6 3.5h5M6 16.5h5M10 3.5v13M10 10h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                </svg>
+              </div>
+              <p className="text-sm font-semibold text-[oklch(38%_0_0)]">El bracket aún no fue generado</p>
+              <p className="text-xs text-[oklch(28%_0_0)]">
+                {isFull
+                  ? isOrganizer
+                    ? 'Usá el botón de arriba para generar el bracket.'
+                    : 'El organizador todavía no generó el bracket.'
+                  : `Faltan ${tournament.maxTeams - tournament.teams.length} equipo${tournament.maxTeams - tournament.teams.length !== 1 ? 's' : ''} para completar el torneo.`
+                }
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </MainLayout>
   )

@@ -151,11 +151,11 @@ export const api = {
   },
 
   generateBracket(id: string) {
-    return request<Bracket>(`/tournament/${id}/bracket`, { method: 'POST' })
+    return request<Bracket>(`/Tournament/${id}/bracket`, { method: 'POST' })
   },
 
   getBracket(id: string) {
-    return request<Bracket>(`/tournament/${id}/bracket`)
+    return request<Bracket>(`/Tournament/${id}/bracket`)
   },
 
   // ── Organizer Request ────────────────────────────────────────────────────────
