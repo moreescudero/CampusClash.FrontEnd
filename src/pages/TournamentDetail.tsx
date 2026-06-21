@@ -102,27 +102,58 @@ function BracketMatchCard({ match }: { match: BracketMatchEntry }) {
 
 function BracketConnector({ pairCount, slotH }: { pairCount: number; slotH: number }) {
   const armH = slotH / 2
-
   return (
     <div className="shrink-0" style={{ width: '24px' }}>
       <div style={{ height: '28px' }} />
       {Array.from({ length: pairCount }).map((_, pi) => (
         <div key={pi} style={{ height: `${slotH * 2}px` }} className="relative">
-          {/* top arm: from center of top slot down to center of pair */}
-          <div
-            className="absolute border-r-2 border-[oklch(26%_0_0)]"
-            style={{ top: armH, left: 0, width: 12, height: armH }}
-          />
-          {/* bottom arm: from center of pair down to center of bottom slot */}
-          <div
-            className="absolute border-r-2 border-[oklch(26%_0_0)]"
-            style={{ top: slotH, left: 0, width: 12, height: armH }}
-          />
-          {/* horizontal connector to next round */}
-          <div
-            className="absolute border-t-2 border-[oklch(26%_0_0)]"
-            style={{ top: slotH - 1, left: 12, right: 0 }}
-          />
+          <div className="absolute border-r-2 border-[oklch(26%_0_0)]" style={{ top: armH, left: 0, width: 12, height: armH }} />
+          <div className="absolute border-r-2 border-[oklch(26%_0_0)]" style={{ top: slotH, left: 0, width: 12, height: armH }} />
+          <div className="absolute border-t-2 border-[oklch(26%_0_0)]" style={{ top: slotH - 1, left: 12, right: 0 }} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function BracketConnectorReverse({ pairCount, slotH }: { pairCount: number; slotH: number }) {
+  const armH = slotH / 2
+  return (
+    <div className="shrink-0" style={{ width: '24px' }}>
+      <div style={{ height: '28px' }} />
+      {Array.from({ length: pairCount }).map((_, pi) => (
+        <div key={pi} style={{ height: `${slotH * 2}px` }} className="relative">
+          <div className="absolute border-l-2 border-[oklch(26%_0_0)]" style={{ top: armH, right: 0, width: 12, height: armH }} />
+          <div className="absolute border-l-2 border-[oklch(26%_0_0)]" style={{ top: slotH, right: 0, width: 12, height: armH }} />
+          <div className="absolute border-t-2 border-[oklch(26%_0_0)]" style={{ top: slotH - 1, left: 0, right: 12 }} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function DirectConnector({ slotH }: { slotH: number }) {
+  return (
+    <div className="shrink-0" style={{ width: '24px' }}>
+      <div style={{ height: '28px' }} />
+      <div style={{ height: `${slotH}px` }} className="relative">
+        <div className="absolute border-t-2 border-[oklch(26%_0_0)]" style={{ top: slotH / 2 - 1, left: 0, right: 0 }} />
+      </div>
+    </div>
+  )
+}
+
+function RoundCol({ roundName, matches, slotH }: { roundName: string; matches: Bracket['rounds'][number]['matches']; slotH: number }) {
+  return (
+    <div style={{ width: '208px' }}>
+      <div style={{ height: '28px' }} className="flex items-center justify-center">
+        <span className="text-[9px] font-black uppercase tracking-[0.16em] text-transparent bg-clip-text bg-gradient-to-r from-[oklch(58%_0.27_292.581)] to-[oklch(62%_0.22_310)]">
+          {roundName}
+        </span>
+      </div>
+      {matches.map((match, mi) => (
+        <div key={match.id ?? mi} style={{ height: `${slotH}px` }} className="flex items-center">
+          <BracketMatchCard match={match} />
         </div>
       ))}
     </div>
@@ -131,39 +162,68 @@ function BracketConnector({ pairCount, slotH }: { pairCount: number; slotH: numb
 
 function BracketView({ bracket }: { bracket: Bracket }) {
   const rounds = bracket.rounds ?? []
-  const totalRounds = rounds.length
+
+  if (rounds.length === 0) return null
+
+  // Single-round tournament (just a final with 2 teams)
+  if (rounds.length === 1) {
+    const r = rounds[0]
+    return (
+      <div className="overflow-x-auto rounded-2xl border border-[oklch(19%_0_0)] bg-[oklch(12.5%_0_0)] p-6 flex justify-center">
+        <RoundCol roundName={r.roundName} matches={r.matches} slotH={SLOT_UNIT} />
+      </div>
+    )
+  }
+
+  const finalRound = rounds[rounds.length - 1]
+  const halfRounds = rounds.slice(0, -1)
+  const totalHalfRounds = halfRounds.length
+
+  // Split each non-final round into left (first half of matches) and right (second half)
+  const leftRounds = halfRounds.map((r) => ({ ...r, matches: r.matches.slice(0, Math.ceil(r.matches.length / 2)) }))
+  const rightRounds = halfRounds.map((r) => ({ ...r, matches: r.matches.slice(Math.ceil(r.matches.length / 2)) })).reverse()
+
+  // Slot height of the innermost half-round (last left / first right) = also the Final's slot height
+  const innerSlotH = SLOT_UNIT * Math.pow(2, totalHalfRounds - 1)
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-[oklch(19%_0_0)] bg-[oklch(12.5%_0_0)] p-6">
       <div className="flex items-start gap-0 min-w-max">
-        {rounds.map((round, ri) => {
+
+        {/* LEFT SIDE: outermost round → innermost (Semi-L) */}
+        {leftRounds.map((round, ri) => {
           const slotH = SLOT_UNIT * Math.pow(2, ri)
-          const matches = round.matches ?? []
-
+          const isLast = ri === totalHalfRounds - 1
           return (
-            <Fragment key={ri}>
-              <div style={{ width: '208px' }}>
-                {/* Round label from backend */}
-                <div style={{ height: '28px' }} className="flex items-center justify-center">
-                  <span className="text-[9px] font-black uppercase tracking-[0.16em] text-transparent bg-clip-text bg-gradient-to-r from-[oklch(58%_0.27_292.581)] to-[oklch(62%_0.22_310)]">
-                    {round.roundName}
-                  </span>
-                </div>
-
-                {/* One slot per match */}
-                {matches.map((match, mi) => (
-                  <div key={match.id ?? mi} style={{ height: `${slotH}px` }} className="flex items-center">
-                    <BracketMatchCard match={match} />
-                  </div>
-                ))}
-              </div>
-
-              {ri < totalRounds - 1 && (
-                <BracketConnector pairCount={Math.max(1, Math.floor(matches.length / 2))} slotH={slotH} />
-              )}
+            <Fragment key={`L${ri}`}>
+              <RoundCol roundName={round.roundName} matches={round.matches} slotH={slotH} />
+              {isLast
+                ? <DirectConnector slotH={slotH} />
+                : <BracketConnector pairCount={Math.floor(round.matches.length / 2)} slotH={slotH} />
+              }
             </Fragment>
           )
         })}
+
+        {/* FINAL — center */}
+        <RoundCol roundName={finalRound.roundName} matches={finalRound.matches} slotH={innerSlotH} />
+
+        {/* RIGHT SIDE: innermost (Semi-R) → outermost, with mirrored connectors */}
+        {rightRounds.map((round, ri) => {
+          const actualRi = totalHalfRounds - 1 - ri
+          const slotH = SLOT_UNIT * Math.pow(2, actualRi)
+          const isFirst = ri === 0
+          return (
+            <Fragment key={`R${ri}`}>
+              {isFirst
+                ? <DirectConnector slotH={innerSlotH} />
+                : <BracketConnectorReverse pairCount={Math.floor(round.matches.length / 2)} slotH={slotH} />
+              }
+              <RoundCol roundName={round.roundName} matches={round.matches} slotH={slotH} />
+            </Fragment>
+          )
+        })}
+
       </div>
     </div>
   )
