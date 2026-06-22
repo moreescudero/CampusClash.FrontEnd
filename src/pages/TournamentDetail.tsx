@@ -1,4 +1,4 @@
-import { useEffect, useState, Fragment, useCallback } from 'react'
+import { useEffect, useState, Fragment } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { MainLayout } from '../components/MainLayout'
 import { api } from '../lib/api'
@@ -90,14 +90,6 @@ function BracketTeamRow({ name, isWinner }: { name: string | null; isWinner: boo
 function BracketMatchCard({ match }: { match: BracketMatchEntry }) {
   const aWon = !!match.winnerId && match.teamAId === match.winnerId
   const bWon = !!match.winnerId && match.teamBId === match.winnerId
-  const [copied, setCopied] = useState(false)
-
-  const copyLobby = useCallback(() => {
-    if (!match.riotLobbyCode) return
-    navigator.clipboard.writeText(match.riotLobbyCode)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }, [match.riotLobbyCode])
 
   return (
     <div className={`w-52 rounded-xl overflow-hidden border transition-all ${
@@ -115,7 +107,7 @@ function BracketMatchCard({ match }: { match: BracketMatchEntry }) {
           <div className="px-3 py-2 flex flex-col gap-1.5">
             {match.scheduledAt && (
               <p className="text-[10px] text-[oklch(40%_0_0)] flex items-center gap-1.5">
-                <svg viewBox="0 0 10 10" fill="none" className="w-2.5 h-2.5 shrink-0 text-[oklch(35%_0_0)]">
+                <svg viewBox="0 0 10 10" fill="none" className="w-2.5 h-2.5 shrink-0">
                   <rect x="0.5" y="1.5" width="9" height="8" rx="1" stroke="currentColor" strokeWidth="1"/>
                   <path d="M0.5 4h9M3 0.5v2M7 0.5v2" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
                 </svg>
@@ -123,16 +115,12 @@ function BracketMatchCard({ match }: { match: BracketMatchEntry }) {
               </p>
             )}
             {match.riotLobbyCode && (
-              <button
-                onClick={copyLobby}
-                className="flex items-center gap-1.5 text-[10px] font-mono text-[oklch(55%_0.2_292.581)] bg-[oklch(49.1%_0.27_292.581/0.08)] hover:bg-[oklch(49.1%_0.27_292.581/0.15)] rounded px-2 py-1 transition-colors cursor-pointer w-full"
+              <a
+                href={`riotclient://launch-product?product=league_of_legends&tournamentCode=${match.riotLobbyCode}`}
+                className="flex items-center justify-center gap-1 text-[10px] font-semibold text-white bg-gradient-to-r from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)] rounded px-2 py-1.5 hover:opacity-90 transition-opacity no-underline"
               >
-                <svg viewBox="0 0 10 10" fill="none" className="w-2.5 h-2.5 shrink-0">
-                  <rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1"/>
-                  <path d="M1 7V1h6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span className="truncate">{copied ? '¡Copiado!' : match.riotLobbyCode}</span>
-              </button>
+                Unirse a partida →
+              </a>
             )}
           </div>
         </>

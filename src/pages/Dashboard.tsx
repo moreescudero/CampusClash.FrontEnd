@@ -240,9 +240,9 @@ export function Dashboard() {
 
     api.getMyTournaments()
       .then(async (myTournaments) => {
-        const active = myTournaments.filter((t) => t.status === 'inProgress')
+        const active = myTournaments.filter((t) => t.status === 'inProgress' || t.status === 'open')
         let soonest: UpcomingMatch | null = null
-        const now = new Date()
+        const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000) // show matches up to 2h after start
 
         for (const tournament of active) {
           const myTeam = tournament.teams.find((team) =>
@@ -258,7 +258,7 @@ export function Dashboard() {
               if (match.winnerId || !match.scheduledAt) continue
               if (match.teamAName !== myTeam.name && match.teamBName !== myTeam.name) continue
               const matchDate = new Date(match.scheduledAt)
-              if (matchDate <= now) continue
+              if (matchDate < cutoff) continue
               if (!soonest || matchDate < new Date(soonest.match.scheduledAt!)) {
                 soonest = { match, roundName: round.roundName, tournamentName: tournament.name, tournamentId: tournament.id, myTeamName: myTeam.name }
               }
@@ -459,16 +459,12 @@ export function Dashboard() {
                   {formatMatchDate(upcomingMatch.match.scheduledAt!)}
                 </p>
                 {upcomingMatch.match.riotLobbyCode && (
-                  <button
-                    onClick={() => navigator.clipboard.writeText(upcomingMatch.match.riotLobbyCode!)}
-                    className="flex items-center gap-1.5 text-[10px] font-mono font-semibold text-[oklch(55%_0.2_292.581)] bg-[oklch(49.1%_0.27_292.581/0.1)] hover:bg-[oklch(49.1%_0.27_292.581/0.18)] border border-[oklch(49.1%_0.27_292.581/0.2)] rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer"
+                  <a
+                    href={`riotclient://launch-product?product=league_of_legends&tournamentCode=${upcomingMatch.match.riotLobbyCode}`}
+                    className="flex items-center gap-1.5 text-[10px] font-semibold text-white bg-gradient-to-r from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)] rounded-lg px-3 py-1.5 hover:opacity-90 transition-opacity no-underline"
                   >
-                    <svg viewBox="0 0 10 10" fill="none" className="w-2.5 h-2.5 shrink-0">
-                      <rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1"/>
-                      <path d="M1 7V1h6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    Copiar código Riot
-                  </button>
+                    Unirse a partida →
+                  </a>
                 )}
               </div>
             </div>
