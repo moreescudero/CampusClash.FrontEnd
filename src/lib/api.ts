@@ -166,6 +166,34 @@ export const api = {
       .then(normalizeBracket)
   },
 
+  // ── LCU / Match lobby ────────────────────────────────────────────────────────
+
+  registerLCU(data: { url: string; token: string }) {
+    return request<{ message: string }>('/lcu/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  createLobby(matchId: string) {
+    return request<{ message: string }>(`/matches/${matchId}/create-lobby`, {
+      method: 'POST',
+    })
+  },
+
+  invitePlayers(matchId: string, playerNames: string[]) {
+    return request<{ message: string }>(`/matches/${matchId}/invite`, {
+      method: 'POST',
+      body: JSON.stringify({ playerNames }),
+    })
+  },
+
+  getLobbyStatus(matchId: string) {
+    return request<{ members?: { summonerName: string; state?: string }[] }>(
+      `/matches/${matchId}/lobby-status`
+    )
+  },
+
   // ── Organizer Request ────────────────────────────────────────────────────────
 
   createOrganizerRequest(data: {

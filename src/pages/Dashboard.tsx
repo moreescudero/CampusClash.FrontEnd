@@ -226,6 +226,14 @@ export function Dashboard() {
 
   const [upcomingMatch, setUpcomingMatch] = useState<UpcomingMatch | null>(null)
   const [loadingUpcoming, setLoadingUpcoming] = useState(true)
+  const [codeCopied, setCodeCopied] = useState(false)
+
+  function copyMatchCode() {
+    if (!upcomingMatch?.match.riotLobbyCode) return
+    navigator.clipboard.writeText(upcomingMatch.match.riotLobbyCode)
+    setCodeCopied(true)
+    setTimeout(() => setCodeCopied(false), 2500)
+  }
 
   useEffect(() => {
     api.getTournaments()
@@ -450,23 +458,36 @@ export function Dashboard() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-xs text-[oklch(45%_0_0)] flex items-center gap-1.5">
-                  <svg viewBox="0 0 10 10" fill="none" className="w-3 h-3 shrink-0">
-                    <rect x="0.5" y="1.5" width="9" height="8" rx="1" stroke="currentColor" strokeWidth="1.1"/>
-                    <path d="M0.5 4h9M3 0.5v2M7 0.5v2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
-                  </svg>
-                  {formatMatchDate(upcomingMatch.match.scheduledAt!)}
-                </p>
-                {upcomingMatch.match.riotLobbyCode && (
-                  <a
-                    href={`riotclient://launch-product?product=league_of_legends&tournamentCode=${upcomingMatch.match.riotLobbyCode}`}
-                    className="flex items-center gap-1.5 text-[10px] font-semibold text-white bg-gradient-to-r from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)] rounded-lg px-3 py-1.5 hover:opacity-90 transition-opacity no-underline"
+              <p className="text-xs text-[oklch(42%_0_0)] flex items-center gap-1.5 mb-3">
+                <svg viewBox="0 0 10 10" fill="none" className="w-3 h-3 shrink-0">
+                  <rect x="0.5" y="1.5" width="9" height="8" rx="1" stroke="currentColor" strokeWidth="1.1"/>
+                  <path d="M0.5 4h9M3 0.5v2M7 0.5v2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                </svg>
+                {formatMatchDate(upcomingMatch.match.scheduledAt!)}
+              </p>
+              {upcomingMatch.match.riotLobbyCode && (
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0 rounded-lg bg-[oklch(13%_0_0)] border border-[oklch(21%_0_0)] px-3 py-2">
+                    <p className="text-[9px] uppercase tracking-widest text-[oklch(32%_0_0)] mb-0.5">Código de sala</p>
+                    <p className="text-xs font-mono font-bold text-white tracking-wider truncate">{upcomingMatch.match.riotLobbyCode}</p>
+                  </div>
+                  <button
+                    onClick={copyMatchCode}
+                    className={`shrink-0 px-3 py-2 rounded-lg text-xs font-semibold transition-all active:scale-95 ${
+                      codeCopied
+                        ? 'bg-[oklch(50%_0.2_145)] text-white'
+                        : 'bg-gradient-to-r from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)] text-white hover:opacity-90'
+                    }`}
                   >
-                    Unirse a partida →
-                  </a>
-                )}
-              </div>
+                    {codeCopied ? '✓ Copiado' : 'Copiar'}
+                  </button>
+                </div>
+              )}
+              {upcomingMatch.match.riotLobbyCode && (
+                <p className="text-[10px] text-[oklch(28%_0_0)] mt-2">
+                  LoL: Jugar → Personalizado → Unirte con código
+                </p>
+              )}
             </div>
           </div>
         )}
