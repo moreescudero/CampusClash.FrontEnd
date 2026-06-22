@@ -210,33 +210,23 @@ function MatchReadyBanner({ match, roundName }: { match: BracketMatchEntry; roun
         {withinWindow && (
           lobbyReady ? (
             <div className="rounded-xl border border-[oklch(52%_0.2_145/0.4)] bg-[oklch(52%_0.2_145/0.06)] p-4 mb-4">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[oklch(52%_0.2_145/0.15)] border border-[oklch(52%_0.2_145/0.25)] flex items-center justify-center shrink-0">
+                  <div className="w-2 h-2 rounded-full bg-[oklch(58%_0.2_145)] shadow-[0_0_8px_oklch(58%_0.2_145/0.8)] animate-pulse" />
+                </div>
                 <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="w-2 h-2 rounded-full bg-[oklch(58%_0.2_145)] shadow-[0_0_8px_oklch(58%_0.2_145/0.8)] animate-pulse" />
-                    <span className="text-xs font-black text-[oklch(68%_0.18_145)] uppercase tracking-wider">¡Lobby listo!</span>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-black text-[oklch(68%_0.18_145)] uppercase tracking-wider">¡Tu invitación está lista!</span>
                     {memberCount > 0 && (
-                      <span className="text-[10px] text-[oklch(48%_0.16_145)] bg-[oklch(52%_0.2_145/0.15)] border border-[oklch(52%_0.2_145/0.25)] px-1.5 py-0.5 rounded-full">
+                      <span className="text-[10px] text-[oklch(45%_0.14_145)] bg-[oklch(52%_0.2_145/0.12)] border border-[oklch(52%_0.2_145/0.2)] px-1.5 py-0.5 rounded-full">
                         {memberCount} en sala
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-[oklch(62%_0_0)] leading-snug">
-                    Abrí League of Legends — tenés una invitación esperándote.
+                  <p className="text-sm text-[oklch(65%_0_0)] leading-snug">
+                    Abrí League of Legends y aceptá la invitación que te llegó al cliente.
                   </p>
                 </div>
-                <a
-                  href="leagueclient://"
-                  className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-semibold text-sm text-white no-underline
-                    bg-gradient-to-r from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)]
-                    hover:opacity-90 active:scale-95 transition-all
-                    shadow-[0_4px_16px_oklch(49.1%_0.27_292.581/0.35)]"
-                >
-                  <svg viewBox="0 0 14 14" fill="none" className="w-3.5 h-3.5">
-                    <path d="M7 1.5L12.5 7 7 12.5M1.5 7h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Abrir LoL
-                </a>
               </div>
             </div>
           ) : (
