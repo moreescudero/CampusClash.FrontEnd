@@ -531,16 +531,24 @@ export function TournamentDetail() {
     team.players.some((p) => p.username === profile?.username)
   )
   const myUpcomingMatch = (() => {
-    if (!bracket || !myTeam) return null
-    const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000)
+    if (!bracket || !myTeam) {
+      if (import.meta.env.DEV) console.log('[myUpcomingMatch] bloqueado — bracket:', !!bracket, 'myTeam:', myTeam?.name)
+      return null
+    }
     for (const round of bracket.rounds) {
       for (const match of round.matches) {
-        if (match.winnerId || !match.scheduledAt) continue
+        if (match.winnerId) continue
+        if (!match.teamAName || !match.teamBName) continue
         if (match.teamAName !== myTeam.name && match.teamBName !== myTeam.name) continue
-        if (new Date(match.scheduledAt) < cutoff) continue
+        // Solo filtrar por fecha si scheduledAt existe y quedó más de 2h atrás
+        if (match.scheduledAt) {
+          const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000)
+          if (new Date(match.scheduledAt) < cutoff) continue
+        }
         return { match, roundName: round.roundName }
       }
     }
+    if (import.meta.env.DEV) console.log('[myUpcomingMatch] ningún partido encontrado para equipo:', myTeam.name)
     return null
   })()
 
