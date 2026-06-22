@@ -44,16 +44,26 @@ function TeamCard({ team }: TeamCardProps) {
         )}
       </div>
       {team.players.length > 0 && (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           {team.players.map((p, i) => {
-            const display = p.username || p.userId || `Jugador ${i + 1}`
-            const initial = display[0]?.toUpperCase() ?? '?'
+            const name = p.username || ''
+            const initial = name ? name[0].toUpperCase() : '?'
             return (
-              <div key={p.userId || i} className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)] flex items-center justify-center text-[9px] font-bold text-white shrink-0">
-                  {initial}
-                </div>
-                <span className="text-xs text-[oklch(58%_0_0)]">{display}</span>
+              <div key={p.userId || i} className="flex items-center gap-2.5 py-1">
+                {name ? (
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)] flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                    {initial}
+                  </div>
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-[oklch(20%_0_0)] border border-dashed border-[oklch(28%_0_0)] flex items-center justify-center shrink-0">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[oklch(25%_0_0)]" />
+                  </div>
+                )}
+                {name ? (
+                  <span className="text-xs font-medium text-[oklch(72%_0_0)] truncate">{name}</span>
+                ) : (
+                  <span className="text-xs text-[oklch(32%_0_0)] italic">Jugador {i + 1}</span>
+                )}
               </div>
             )
           })}

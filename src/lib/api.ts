@@ -87,12 +87,29 @@ function normalizeTournament(t: Tournament): Tournament {
       ...team,
       players: (team.players ?? []).map((p) => {
         const raw = p as unknown as Record<string, string>
-        const username =
+        const isUUID = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)
+
+        // 1. Intentar campos conocidos en orden de preferencia
+        const fromKnown =
           raw.userName ?? raw.username ?? raw.UserName ?? raw.Username ??
-          raw.name ?? raw.Name ?? raw.displayName ?? raw.DisplayName ?? ''
+          raw.name ?? raw.Name ?? raw.displayName ?? raw.DisplayName ??
+          raw.summonerName ?? raw.SummonerName ?? raw.nickname ?? raw.Nickname ?? ''
+
+        // 2. Si los campos conocidos fallan o devuelven un UUID, escanear todos
+        //    los campos string buscando uno que no sea un UUID ni un campo de ID
+        const username = (fromKnown && !isUUID(fromKnown))
+          ? fromKnown
+          : Object.entries(raw).reduce<string>((found, [k, v]) => {
+              if (found) return found
+              if (typeof v !== 'string' || !v || isUUID(v)) return found
+              if (/^(user)?id$/i.test(k)) return found
+              return v
+            }, '')
+
         const userId = raw.userId ?? raw.UserId ?? raw.id ?? raw.Id ?? ''
+
         if (!username && import.meta.env.DEV) {
-          console.warn('[TeamPlayer] No se encontró username en el player. Campos disponibles:', Object.keys(raw))
+          console.warn('[TeamPlayer] Sin username. Campos del backend:', raw)
         }
         return { ...p, userId, username }
       }),
