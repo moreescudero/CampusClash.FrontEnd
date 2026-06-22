@@ -43,7 +43,39 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 function normalizeBracket(raw: unknown): Bracket {
   const obj = raw as Record<string, unknown>
   const rounds = obj.rounds
-  return { rounds: Array.isArray(rounds) ? (rounds as Bracket['rounds']) : [] }
+
+  if (!Array.isArray(rounds)) return { rounds: [] }
+
+  return {
+    rounds: rounds.map((r) => {
+      const rd = r as Record<string, unknown>
+      const matches = Array.isArray(rd.matches) ? rd.matches : []
+      return {
+        round: (rd.round ?? rd.Round ?? 0) as number,
+        roundName: String(rd.roundName ?? rd.RoundName ?? ''),
+        matches: matches.map((m) => {
+          const mt = m as Record<string, unknown>
+          const str = (v: unknown) => (v != null ? String(v) : null)
+          const id = str(mt.id ?? mt.Id ?? mt.matchId ?? mt.MatchId) ?? ''
+          if (!id && import.meta.env.DEV) {
+            console.warn('[normalizeBracket] match sin id — campos disponibles:', Object.keys(mt))
+          }
+          return {
+            id,
+            matchNumber:   Number(mt.matchNumber  ?? mt.MatchNumber  ?? 0),
+            teamAId:       str(mt.teamAId    ?? mt.TeamAId)    ,
+            teamAName:     str(mt.teamAName  ?? mt.TeamAName)  ,
+            teamBId:       str(mt.teamBId    ?? mt.TeamBId)    ,
+            teamBName:     str(mt.teamBName  ?? mt.TeamBName)  ,
+            winnerId:      str(mt.winnerId   ?? mt.WinnerId)   ,
+            winnerName:    str(mt.winnerName ?? mt.WinnerName) ,
+            scheduledAt:   str(mt.scheduledAt  ?? mt.ScheduledAt)  ,
+            riotLobbyCode: str(mt.riotLobbyCode ?? mt.RiotLobbyCode),
+          }
+        }),
+      }
+    }),
+  }
 }
 
 function normalizeTournament(t: Tournament): Tournament {

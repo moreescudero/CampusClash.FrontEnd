@@ -133,6 +133,10 @@ function MatchReadyBanner({ match, roundName }: { match: BracketMatchEntry; roun
   useEffect(() => {
     if (!withinWindow) return
 
+    if (import.meta.env.DEV) {
+      console.log('[LobbyStatus] match.id =', match.id, '| URL → /api/matches/' + match.id + '/lobby-status')
+    }
+
     async function poll() {
       try {
         const data = await api.getLobbyStatus(match.id)
@@ -142,14 +146,14 @@ function MatchReadyBanner({ match, roundName }: { match: BracketMatchEntry; roun
           setLobbyReady(true)
         }
       } catch {
-        // 404 LOBBY_NOT_FOUND o error → todavía no está listo, no cambiar estado
+        // 400/404 LOBBY_NOT_FOUND → todavía no está listo, no cambiar estado
       }
     }
 
     poll()
     const id = setInterval(poll, 30_000)
     return () => clearInterval(id)
-  }, [match.id]) // withinWindow es estable mientras el partido no cambia
+  }, [match.id])
 
   function copy() {
     if (!match.riotLobbyCode) return
