@@ -53,10 +53,17 @@ function normalizeTournament(t: Tournament): Tournament {
     status: normalizeStatus(t.status as unknown as string),
     teams: (t.teams ?? []).map((team) => ({
       ...team,
-      players: (team.players ?? []).map((p) => ({
-        ...p,
-        username: (p as unknown as Record<string, string>).userName ?? p.username ?? '',
-      })),
+      players: (team.players ?? []).map((p) => {
+        const raw = p as unknown as Record<string, string>
+        const username =
+          raw.userName ?? raw.username ?? raw.UserName ?? raw.Username ??
+          raw.name ?? raw.Name ?? raw.displayName ?? raw.DisplayName ?? ''
+        const userId = raw.userId ?? raw.UserId ?? raw.id ?? raw.Id ?? ''
+        if (!username && import.meta.env.DEV) {
+          console.warn('[TeamPlayer] No se encontró username en el player. Campos disponibles:', Object.keys(raw))
+        }
+        return { ...p, userId, username }
+      }),
     })),
   }
 }

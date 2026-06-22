@@ -45,14 +45,18 @@ function TeamCard({ team }: TeamCardProps) {
       </div>
       {team.players.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          {team.players.map((p) => (
-            <div key={p.userId} className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)] flex items-center justify-center text-[9px] font-bold text-white shrink-0">
-                {p.username[0]?.toUpperCase()}
+          {team.players.map((p, i) => {
+            const display = p.username || p.userId || `Jugador ${i + 1}`
+            const initial = display[0]?.toUpperCase() ?? '?'
+            return (
+              <div key={p.userId || i} className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)] flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                  {initial}
+                </div>
+                <span className="text-xs text-[oklch(58%_0_0)]">{display}</span>
               </div>
-              <span className="text-xs text-[oklch(58%_0_0)]">{p.username}</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
@@ -118,50 +122,34 @@ function BracketMatchCard({ match }: { match: BracketMatchEntry }) {
   )
 }
 
-function MatchReadyBanner({
-  match,
-  roundName,
-  isOrganizer,
-}: {
-  match: BracketMatchEntry
-  roundName: string
-  isOrganizer: boolean
-}) {
+function MatchReadyBanner({ match, roundName }: { match: BracketMatchEntry; roundName: string }) {
+  const [lobbyReady, setLobbyReady] = useState(false)
+  const [memberCount, setMemberCount] = useState(0)
   const [copied, setCopied] = useState(false)
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState('')
-  const [lobbyMembers, setLobbyMembers] = useState<{ summonerName: string; state?: string }[]>([])
-  const [lobbyLoaded, setLobbyLoaded] = useState(false)
+
+  const withinWindow = !!match.scheduledAt &&
+    new Date(match.scheduledAt).getTime() - Date.now() <= 8 * 60 * 60 * 1000
 
   useEffect(() => {
-    fetchLobbyStatus()
-    const id = setInterval(fetchLobbyStatus, 10_000)
+    if (!withinWindow) return
+
+    async function poll() {
+      try {
+        const data = await api.getLobbyStatus(match.id)
+        const members = data.members ?? []
+        if (members.length > 0) {
+          setMemberCount(members.length)
+          setLobbyReady(true)
+        }
+      } catch {
+        // 404 LOBBY_NOT_FOUND o error → todavía no está listo, no cambiar estado
+      }
+    }
+
+    poll()
+    const id = setInterval(poll, 30_000)
     return () => clearInterval(id)
-  }, [match.id])
-
-  async function fetchLobbyStatus() {
-    try {
-      const data = await api.getLobbyStatus(match.id)
-      setLobbyMembers(data.members ?? [])
-    } catch {
-      setLobbyMembers([])
-    } finally {
-      setLobbyLoaded(true)
-    }
-  }
-
-  async function handleCreateLobby() {
-    setCreateError('')
-    setCreating(true)
-    try {
-      await api.createLobby(match.id)
-      await fetchLobbyStatus()
-    } catch (err) {
-      setCreateError(err instanceof Error ? err.message : 'No se pudo crear el lobby')
-    } finally {
-      setCreating(false)
-    }
-  }
+  }, [match.id]) // withinWindow es estable mientras el partido no cambia
 
   function copy() {
     if (!match.riotLobbyCode) return
@@ -200,76 +188,59 @@ function MatchReadyBanner({
           </div>
         </div>
 
-        {/* Lobby status */}
-        <div className="rounded-xl border border-[oklch(23%_0_0)] bg-[oklch(15%_0_0)] p-4">
-          <div className="flex items-center justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full shrink-0 ${lobbyMembers.length > 0 ? 'bg-[oklch(55%_0.2_145)] shadow-[0_0_6px_oklch(55%_0.2_145/0.7)]' : 'bg-[oklch(28%_0_0)]'}`} />
-              <span className="text-xs font-semibold text-[oklch(55%_0_0)]">
-                {lobbyMembers.length > 0
-                  ? `Lobby activo · ${lobbyMembers.length} jugador${lobbyMembers.length !== 1 ? 'es' : ''}`
-                  : 'Estado del lobby'}
-              </span>
-            </div>
-            <button
-              onClick={fetchLobbyStatus}
-              className="text-[10px] text-[oklch(35%_0_0)] hover:text-[oklch(60%_0_0)] transition-colors shrink-0"
-            >
-              Actualizar
-            </button>
-          </div>
-
-          {!lobbyLoaded ? (
-            <div className="flex gap-1.5">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-6 w-20 rounded-full bg-[oklch(20%_0_0)] animate-pulse" />
-              ))}
-            </div>
-          ) : lobbyMembers.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {lobbyMembers.map((m, i) => (
-                <span
-                  key={i}
-                  className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[oklch(50%_0.2_145/0.12)] border border-[oklch(50%_0.2_145/0.25)] text-[oklch(62%_0.16_145)]"
+        {/* Lobby status — solo visible dentro de la ventana de 8h */}
+        {withinWindow && (
+          lobbyReady ? (
+            <div className="rounded-xl border border-[oklch(52%_0.2_145/0.4)] bg-[oklch(52%_0.2_145/0.06)] p-4 mb-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="w-2 h-2 rounded-full bg-[oklch(58%_0.2_145)] shadow-[0_0_8px_oklch(58%_0.2_145/0.8)] animate-pulse" />
+                    <span className="text-xs font-black text-[oklch(68%_0.18_145)] uppercase tracking-wider">¡Lobby listo!</span>
+                    {memberCount > 0 && (
+                      <span className="text-[10px] text-[oklch(48%_0.16_145)] bg-[oklch(52%_0.2_145/0.15)] border border-[oklch(52%_0.2_145/0.25)] px-1.5 py-0.5 rounded-full">
+                        {memberCount} en sala
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-[oklch(62%_0_0)] leading-snug">
+                    Abrí League of Legends — tenés una invitación esperándote.
+                  </p>
+                </div>
+                <a
+                  href="leagueclient://"
+                  className="shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-semibold text-sm text-white no-underline
+                    bg-gradient-to-r from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)]
+                    hover:opacity-90 active:scale-95 transition-all
+                    shadow-[0_4px_16px_oklch(49.1%_0.27_292.581/0.35)]"
                 >
-                  {m.summonerName}
-                </span>
-              ))}
+                  <svg viewBox="0 0 14 14" fill="none" className="w-3.5 h-3.5">
+                    <path d="M7 1.5L12.5 7 7 12.5M1.5 7h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Abrir LoL
+                </a>
+              </div>
             </div>
           ) : (
-            <p className="text-xs text-[oklch(32%_0_0)]">El lobby se crea automáticamente 1 hora antes de la partida.</p>
-          )}
-
-          {/* Organizer manual trigger */}
-          {isOrganizer && (
-            <div className="mt-3 pt-3 border-t border-[oklch(20%_0_0)] flex items-center gap-3">
-              <button
-                onClick={handleCreateLobby}
-                disabled={creating}
-                className="flex items-center gap-1.5 text-xs font-semibold text-[oklch(49.1%_0.27_292.581)] hover:text-[oklch(62%_0.25_292.581)] disabled:opacity-50 transition-colors"
-              >
-                {creating && (
-                  <svg className="w-3 h-3 animate-spin" viewBox="0 0 12 12" fill="none">
-                    <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="2" strokeDasharray="6 18" />
-                  </svg>
-                )}
-                {creating ? 'Creando...' : 'Crear lobby ahora'}
-              </button>
-              {createError && (
-                <span className="text-[10px] text-[oklch(62%_0.22_25)]">{createError}</span>
-              )}
+            <div className="flex items-center gap-2 mb-4 px-1">
+              <svg className="w-3 h-3 animate-spin text-[oklch(35%_0_0)]" viewBox="0 0 12 12" fill="none">
+                <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="2" strokeDasharray="6 18" />
+              </svg>
+              <span className="text-xs text-[oklch(34%_0_0)]">Preparando lobby...</span>
             </div>
-          )}
-        </div>
+          )
+        )}
 
         {/* Fallback: código manual */}
         {match.riotLobbyCode && (
           <>
-            <div className="flex items-center gap-3 mt-4 mb-3">
-              <div className="flex-1 h-px bg-[oklch(19%_0_0)]" />
-              <span className="text-[9px] text-[oklch(26%_0_0)] uppercase tracking-widest">o entrá manualmente</span>
-              <div className="flex-1 h-px bg-[oklch(19%_0_0)]" />
-            </div>
+            {withinWindow && (
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex-1 h-px bg-[oklch(19%_0_0)]" />
+                <span className="text-[9px] text-[oklch(26%_0_0)] uppercase tracking-widest">o entrá manualmente</span>
+                <div className="flex-1 h-px bg-[oklch(19%_0_0)]" />
+              </div>
+            )}
             <div className="flex items-center gap-3">
               <div className="flex-1 min-w-0 rounded-xl bg-[oklch(11%_0_0)] border border-[oklch(20%_0_0)] px-4 py-2.5">
                 <p className="text-[9px] uppercase tracking-widest text-[oklch(32%_0_0)] mb-0.5">Código de sala</p>
@@ -636,11 +607,7 @@ export function TournamentDetail() {
 
         {/* Match ready banner — shown to participants when their match has a scheduled lobby */}
         {myUpcomingMatch && (
-          <MatchReadyBanner
-            match={myUpcomingMatch.match}
-            roundName={myUpcomingMatch.roundName}
-            isOrganizer={isOrganizer}
-          />
+          <MatchReadyBanner match={myUpcomingMatch.match} roundName={myUpcomingMatch.roundName} />
         )}
 
         {/* Generate bracket banner — organizer only, when tournament is full and bracket not yet created */}
