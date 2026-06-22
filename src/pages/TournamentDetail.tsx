@@ -141,8 +141,6 @@ function MatchReadyBanner({ match, roundName }: { match: BracketMatchEntry; roun
     new Date(match.scheduledAt).getTime() - Date.now() <= 8 * 60 * 60 * 1000
 
   useEffect(() => {
-    if (!withinWindow) return
-
     if (import.meta.env.DEV) {
       console.log('[LobbyStatus] match.id =', match.id, '| URL → /api/matches/' + match.id + '/lobby-status')
     }
@@ -216,8 +214,8 @@ function MatchReadyBanner({ match, roundName }: { match: BracketMatchEntry; roun
           </div>
         </div>
 
-        {/* Lobby status — solo visible dentro de la ventana de 8h */}
-        {withinWindow && (
+        {/* Lobby status — visible si el lobby ya existe O si estamos a ≤8h del partido */}
+        {(lobbyReady || withinWindow) && (
           lobbyReady ? (
             <div className="rounded-xl border border-[oklch(52%_0.2_145/0.4)] bg-[oklch(52%_0.2_145/0.06)] p-4 mb-4">
               <div className="flex items-start gap-3">
