@@ -139,14 +139,28 @@ function MatchReadyBanner({ match, roundName }: { match: BracketMatchEntry; roun
 
     async function poll() {
       try {
-        const data = await api.getLobbyStatus(match.id)
-        const members = data.members ?? []
+        const raw = await api.getLobbyStatus(match.id)
+        // El backend puede devolver el array directo o envuelto en un objeto
+        const members: unknown[] = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as Record<string, unknown>)?.members)
+            ? (raw as Record<string, unknown[]>).members
+            : Array.isArray((raw as Record<string, unknown>)?.Members)
+              ? (raw as Record<string, unknown[]>).Members
+              : Array.isArray((raw as Record<string, unknown>)?.participants)
+                ? (raw as Record<string, unknown[]>).participants
+                : []
+
+        if (import.meta.env.DEV) {
+          console.log('[LobbyStatus] respuesta raw:', raw, '→ members:', members.length)
+        }
+
         if (members.length > 0) {
           setMemberCount(members.length)
           setLobbyReady(true)
         }
       } catch {
-        // 400/404 LOBBY_NOT_FOUND → todavía no está listo, no cambiar estado
+        // 400/404 LOBBY_NOT_FOUND → todavía no está listo
       }
     }
 

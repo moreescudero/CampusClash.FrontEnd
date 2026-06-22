@@ -228,9 +228,7 @@ export const api = {
   },
 
   getLobbyStatus(matchId: string) {
-    return request<{ members?: { summonerName: string; state?: string }[] }>(
-      `/matches/${matchId}/lobby-status`
-    )
+    return request<unknown>(`/matches/${matchId}/lobby-status`)
   },
 
   // ── Organizer Request ────────────────────────────────────────────────────────
