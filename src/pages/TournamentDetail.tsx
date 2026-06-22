@@ -2,7 +2,7 @@ import { useEffect, useState, Fragment } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { MainLayout } from '../components/MainLayout'
 import { api } from '../lib/api'
-import { Tournament, Team, GAME_CONFIG, STATUS_CONFIG, formatDate, Bracket, BracketMatchEntry } from '../types/tournament'
+import { Tournament, GAME_CONFIG, STATUS_CONFIG, formatDate, Bracket, BracketMatchEntry } from '../types/tournament'
 import { getProfile } from '../lib/auth'
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -118,61 +118,48 @@ function BracketMatchCard({ match }: { match: BracketMatchEntry }) {
   )
 }
 
-type HostStep = 'idle' | 'registering' | 'creating' | 'inviting' | 'done'
-
 function MatchReadyBanner({
   match,
   roundName,
-  teams,
+  isOrganizer,
 }: {
   match: BracketMatchEntry
   roundName: string
-  teams: Team[]
+  isOrganizer: boolean
 }) {
   const [copied, setCopied] = useState(false)
-  const [showHost, setShowHost] = useState(false)
-  const [showHelp, setShowHelp] = useState(false)
-  const [ngrokUrl, setNgrokUrl] = useState('')
-  const [lcuToken, setLcuToken] = useState('')
-  const [hostStep, setHostStep] = useState<HostStep>('idle')
-  const [hostError, setHostError] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
   const [lobbyMembers, setLobbyMembers] = useState<{ summonerName: string; state?: string }[]>([])
-
-  const teamA = teams.find((t) => t.id === match.teamAId)
-  const teamB = teams.find((t) => t.id === match.teamBId)
-  const allPlayerNames = [
-    ...(teamA?.players ?? []).map((p) => p.username),
-    ...(teamB?.players ?? []).map((p) => p.username),
-  ]
+  const [lobbyLoaded, setLobbyLoaded] = useState(false)
 
   useEffect(() => {
-    if (hostStep !== 'done') return
     fetchLobbyStatus()
     const id = setInterval(fetchLobbyStatus, 10_000)
     return () => clearInterval(id)
-  }, [hostStep])
+  }, [match.id])
 
   async function fetchLobbyStatus() {
     try {
       const data = await api.getLobbyStatus(match.id)
       setLobbyMembers(data.members ?? [])
-    } catch {}
+    } catch {
+      setLobbyMembers([])
+    } finally {
+      setLobbyLoaded(true)
+    }
   }
 
-  async function handleHostFlow() {
-    if (!ngrokUrl.trim() || !lcuToken.trim()) return
-    setHostError('')
+  async function handleCreateLobby() {
+    setCreateError('')
+    setCreating(true)
     try {
-      setHostStep('registering')
-      await api.registerLCU({ url: ngrokUrl.trim(), token: lcuToken.trim() })
-      setHostStep('creating')
       await api.createLobby(match.id)
-      setHostStep('inviting')
-      await api.invitePlayers(match.id, allPlayerNames)
-      setHostStep('done')
+      await fetchLobbyStatus()
     } catch (err) {
-      setHostError(err instanceof Error ? err.message : 'No se pudo crear la sala')
-      setHostStep('idle')
+      setCreateError(err instanceof Error ? err.message : 'No se pudo crear el lobby')
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -181,16 +168,6 @@ function MatchReadyBanner({
     navigator.clipboard.writeText(match.riotLobbyCode)
     setCopied(true)
     setTimeout(() => setCopied(false), 2500)
-  }
-
-  const isBusy = hostStep === 'registering' || hostStep === 'creating' || hostStep === 'inviting'
-
-  const stepLabel: Record<HostStep, string> = {
-    idle: 'Crear sala e invitar jugadores',
-    registering: 'Conectando con tu cliente...',
-    creating: 'Creando sala personalizada...',
-    inviting: 'Enviando invitaciones...',
-    done: 'Sala creada',
   }
 
   return (
@@ -213,7 +190,7 @@ function MatchReadyBanner({
         </div>
 
         {/* Teams VS */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-5">
           <div className="flex-1 min-w-0 rounded-xl bg-[oklch(17%_0_0)] border border-[oklch(24%_0_0)] px-4 py-3 text-center">
             <p className="text-sm font-bold text-white truncate">{match.teamAName ?? 'Por definir'}</p>
           </div>
@@ -223,130 +200,72 @@ function MatchReadyBanner({
           </div>
         </div>
 
-        {/* ── Host flow ──────────────────────────────────────────────── */}
-        {hostStep === 'done' ? (
-          <div className="rounded-xl border border-[oklch(50%_0.2_145/0.3)] bg-[oklch(50%_0.2_145/0.05)] p-4">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[oklch(55%_0.2_145)] shadow-[0_0_6px_oklch(55%_0.2_145/0.8)]" />
-                <span className="text-xs font-bold text-[oklch(65%_0.18_145)]">Sala creada · esperando jugadores</span>
-              </div>
-              <button
-                onClick={fetchLobbyStatus}
-                className="text-[10px] text-[oklch(40%_0_0)] hover:text-white transition-colors"
-              >
-                Actualizar
-              </button>
+        {/* Lobby status */}
+        <div className="rounded-xl border border-[oklch(23%_0_0)] bg-[oklch(15%_0_0)] p-4">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full shrink-0 ${lobbyMembers.length > 0 ? 'bg-[oklch(55%_0.2_145)] shadow-[0_0_6px_oklch(55%_0.2_145/0.7)]' : 'bg-[oklch(28%_0_0)]'}`} />
+              <span className="text-xs font-semibold text-[oklch(55%_0_0)]">
+                {lobbyMembers.length > 0
+                  ? `Lobby activo · ${lobbyMembers.length} jugador${lobbyMembers.length !== 1 ? 'es' : ''}`
+                  : 'Estado del lobby'}
+              </span>
             </div>
-            {lobbyMembers.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {lobbyMembers.map((m, i) => (
-                  <span
-                    key={i}
-                    className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[oklch(50%_0.2_145/0.15)] border border-[oklch(50%_0.2_145/0.3)] text-[oklch(65%_0.18_145)]"
-                  >
-                    {m.summonerName}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-[oklch(35%_0_0)]">Aún no hay jugadores en el lobby...</p>
-            )}
-          </div>
-        ) : (
-          <>
             <button
-              onClick={() => setShowHost((v) => !v)}
-              className="w-full flex items-center justify-between gap-3 rounded-xl border border-[oklch(25%_0_0)] bg-[oklch(16%_0_0)] hover:bg-[oklch(19%_0_0)] px-4 py-3 transition-colors"
+              onClick={fetchLobbyStatus}
+              className="text-[10px] text-[oklch(35%_0_0)] hover:text-[oklch(60%_0_0)] transition-colors shrink-0"
             >
-              <div className="flex items-center gap-2.5">
-                <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4 text-[oklch(49.1%_0.27_292.581)] shrink-0">
-                  <path d="M8 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM3 13c0-2.21 2.239-4 5-4s5 1.79 5 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-                  <circle cx="13" cy="5" r="2" fill="currentColor" opacity=".6"/>
-                </svg>
-                <span className="text-xs font-semibold text-[oklch(65%_0_0)]">Soy el host — crear sala automáticamente</span>
-              </div>
-              <svg
-                viewBox="0 0 10 10"
-                fill="none"
-                className={`w-3 h-3 text-[oklch(40%_0_0)] transition-transform ${showHost ? 'rotate-180' : ''}`}
-              >
-                <path d="M2 3.5l3 3 3-3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              Actualizar
             </button>
+          </div>
 
-            {showHost && (
-              <div className="mt-3 rounded-xl border border-[oklch(23%_0_0)] bg-[oklch(15%_0_0)] p-4 flex flex-col gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-semibold uppercase tracking-widest text-[oklch(42%_0_0)]">URL de ngrok</label>
-                  <input
-                    type="url"
-                    value={ngrokUrl}
-                    onChange={(e) => setNgrokUrl(e.target.value)}
-                    placeholder="https://abc123.ngrok-free.app"
-                    className="h-9 rounded-lg bg-[oklch(18%_0_0)] border border-[oklch(26%_0_0)] px-3 text-sm text-white placeholder-[oklch(30%_0_0)] outline-none focus:border-[oklch(49.1%_0.27_292.581)] focus:shadow-[0_0_0_3px_oklch(49.1%_0.27_292.581/0.12)] transition-all"
-                  />
-                  <p className="text-[10px] text-[oklch(35%_0_0)]">Ejecutá <code className="font-mono text-[oklch(50%_0.2_60)]">ngrok http 2999</code> y pegá la URL HTTPS que te da</p>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-semibold uppercase tracking-widest text-[oklch(42%_0_0)]">Token LCU</label>
-                    <button
-                      onClick={() => setShowHelp((v) => !v)}
-                      className="text-[10px] text-[oklch(49.1%_0.27_292.581)] hover:text-[oklch(62%_0.25_292.581)] transition-colors"
-                    >
-                      {showHelp ? 'Ocultar ayuda' : '¿Cómo lo obtengo?'}
-                    </button>
-                  </div>
-                  <input
-                    type="password"
-                    value={lcuToken}
-                    onChange={(e) => setLcuToken(e.target.value)}
-                    placeholder="Tu token de autenticación LCU"
-                    className="h-9 rounded-lg bg-[oklch(18%_0_0)] border border-[oklch(26%_0_0)] px-3 text-sm text-white placeholder-[oklch(30%_0_0)] outline-none focus:border-[oklch(49.1%_0.27_292.581)] focus:shadow-[0_0_0_3px_oklch(49.1%_0.27_292.581/0.12)] transition-all"
-                  />
-                  {showHelp && (
-                    <div className="rounded-lg border border-[oklch(25%_0_0)] bg-[oklch(17%_0_0)] p-3 flex flex-col gap-1.5">
-                      <p className="text-[10px] font-semibold text-[oklch(50%_0_0)]">Con LoL abierto, buscá el archivo <code className="font-mono text-[oklch(60%_0.18_60)]">lockfile</code>:</p>
-                      <p className="text-[10px] text-[oklch(38%_0_0)] font-mono">Windows: C:\Riot Games\League of Legends\lockfile</p>
-                      <p className="text-[10px] text-[oklch(38%_0_0)] font-mono">Mac: /Applications/League of Legends.app/Contents/LoL/lockfile</p>
-                      <p className="text-[10px] text-[oklch(45%_0_0)] mt-0.5">El archivo tiene el formato <code className="font-mono">LeagueClient:PID:PORT:<span className="text-[oklch(65%_0.18_60)]">TOKEN</span>:https</code> — copiá el 4° campo.</p>
-                    </div>
-                  )}
-                </div>
-
-                {hostError && (
-                  <p className="text-xs text-[oklch(62%_0.22_25)] bg-[oklch(62%_0.22_25/0.08)] border border-[oklch(62%_0.22_25/0.2)] rounded-lg px-3 py-2">
-                    {hostError}
-                  </p>
-                )}
-
-                <button
-                  onClick={handleHostFlow}
-                  disabled={isBusy || !ngrokUrl.trim() || !lcuToken.trim()}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm text-white
-                    bg-gradient-to-r from-[oklch(47%_0.28_283)] to-[oklch(54%_0.27_307)]
-                    hover:opacity-90 active:scale-95 transition-all
-                    disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100
-                    shadow-[0_4px_20px_oklch(49.1%_0.27_292.581/0.3)]"
+          {!lobbyLoaded ? (
+            <div className="flex gap-1.5">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-6 w-20 rounded-full bg-[oklch(20%_0_0)] animate-pulse" />
+              ))}
+            </div>
+          ) : lobbyMembers.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {lobbyMembers.map((m, i) => (
+                <span
+                  key={i}
+                  className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-[oklch(50%_0.2_145/0.12)] border border-[oklch(50%_0.2_145/0.25)] text-[oklch(62%_0.16_145)]"
                 >
-                  {isBusy && (
-                    <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 14 14" fill="none">
-                      <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="2" strokeDasharray="8 24" />
-                    </svg>
-                  )}
-                  {stepLabel[hostStep]}
-                </button>
-              </div>
-            )}
-          </>
-        )}
+                  {m.summonerName}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-[oklch(32%_0_0)]">El lobby se crea automáticamente 1 hora antes de la partida.</p>
+          )}
 
-        {/* ── Fallback: código manual ─────────────────────────────────── */}
+          {/* Organizer manual trigger */}
+          {isOrganizer && (
+            <div className="mt-3 pt-3 border-t border-[oklch(20%_0_0)] flex items-center gap-3">
+              <button
+                onClick={handleCreateLobby}
+                disabled={creating}
+                className="flex items-center gap-1.5 text-xs font-semibold text-[oklch(49.1%_0.27_292.581)] hover:text-[oklch(62%_0.25_292.581)] disabled:opacity-50 transition-colors"
+              >
+                {creating && (
+                  <svg className="w-3 h-3 animate-spin" viewBox="0 0 12 12" fill="none">
+                    <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="2" strokeDasharray="6 18" />
+                  </svg>
+                )}
+                {creating ? 'Creando...' : 'Crear lobby ahora'}
+              </button>
+              {createError && (
+                <span className="text-[10px] text-[oklch(62%_0.22_25)]">{createError}</span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Fallback: código manual */}
         {match.riotLobbyCode && (
           <>
-            <div className="flex items-center gap-3 my-4">
+            <div className="flex items-center gap-3 mt-4 mb-3">
               <div className="flex-1 h-px bg-[oklch(19%_0_0)]" />
               <span className="text-[9px] text-[oklch(26%_0_0)] uppercase tracking-widest">o entrá manualmente</span>
               <div className="flex-1 h-px bg-[oklch(19%_0_0)]" />
@@ -720,7 +639,7 @@ export function TournamentDetail() {
           <MatchReadyBanner
             match={myUpcomingMatch.match}
             roundName={myUpcomingMatch.roundName}
-            teams={tournament.teams}
+            isOrganizer={isOrganizer}
           />
         )}
 
