@@ -115,6 +115,8 @@ export interface BracketMatchEntry {
   teamBName: string | null
   winnerId: string | null
   winnerName: string | null
+  scheduledAt: string | null
+  riotLobbyCode: string | null
 }
 
 export interface BracketRound {

@@ -4,7 +4,20 @@ import { getProfile, setProfile, getInitials, UserProfile } from '../lib/auth'
 import { MainLayout } from '../components/MainLayout'
 import { TournamentCard } from '../components/TournamentCard'
 import { api } from '../lib/api'
-import { Tournament, GameString, GAME_CONFIG } from '../types/tournament'
+import { Tournament, GameString, GAME_CONFIG, BracketMatchEntry } from '../types/tournament'
+
+interface UpcomingMatch {
+  match: BracketMatchEntry
+  roundName: string
+  tournamentName: string
+  tournamentId: string
+  myTeamName: string
+}
+
+function formatMatchDate(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleString('es-AR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
 
 const FEATURED_TOURNAMENTS = [
   {
@@ -211,11 +224,51 @@ export function Dashboard() {
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [loadingTournaments, setLoadingTournaments] = useState(true)
 
+  const [upcomingMatch, setUpcomingMatch] = useState<UpcomingMatch | null>(null)
+  const [loadingUpcoming, setLoadingUpcoming] = useState(true)
+
   useEffect(() => {
     api.getTournaments()
       .then((data) => setTournaments(data.slice(0, 3)))
       .catch(() => {})
       .finally(() => setLoadingTournaments(false))
+  }, [])
+
+  useEffect(() => {
+    if (!profile?.username) { setLoadingUpcoming(false); return }
+    const username = profile.username
+
+    api.getMyTournaments()
+      .then(async (myTournaments) => {
+        const active = myTournaments.filter((t) => t.status === 'inProgress')
+        let soonest: UpcomingMatch | null = null
+        const now = new Date()
+
+        for (const tournament of active) {
+          const myTeam = tournament.teams.find((team) =>
+            team.players.some((p) => p.username === username)
+          )
+          if (!myTeam) continue
+
+          const bracket = await api.getBracket(tournament.id).catch(() => null)
+          if (!bracket) continue
+
+          for (const round of bracket.rounds) {
+            for (const match of round.matches) {
+              if (match.winnerId || !match.scheduledAt) continue
+              if (match.teamAName !== myTeam.name && match.teamBName !== myTeam.name) continue
+              const matchDate = new Date(match.scheduledAt)
+              if (matchDate <= now) continue
+              if (!soonest || matchDate < new Date(soonest.match.scheduledAt!)) {
+                soonest = { match, roundName: round.roundName, tournamentName: tournament.name, tournamentId: tournament.id, myTeamName: myTeam.name }
+              }
+            }
+          }
+        }
+        setUpcomingMatch(soonest)
+      })
+      .catch(() => {})
+      .finally(() => setLoadingUpcoming(false))
   }, [])
 
   // Consulta el estado de validación siempre que no esté aprobado aún.
@@ -353,6 +406,74 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Próximo partido */}
+        {!loadingUpcoming && upcomingMatch && (
+          <div className="rounded-2xl border border-[oklch(49.1%_0.27_292.581/0.25)] bg-[oklch(49.1%_0.27_292.581/0.04)] overflow-hidden">
+            <div className="h-[2px] bg-gradient-to-r from-[oklch(47%_0.28_283)] via-[oklch(58%_0.25_310)] to-transparent" />
+            <div className="p-5">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[oklch(49.1%_0.27_292.581)] mb-1">
+                    Próximo partido
+                  </p>
+                  <p className="text-sm font-bold text-white">{upcomingMatch.tournamentName}</p>
+                  <span className="inline-block mt-1 text-[10px] font-semibold text-[oklch(49.1%_0.27_292.581)] bg-[oklch(49.1%_0.27_292.581/0.12)] border border-[oklch(49.1%_0.27_292.581/0.25)] px-2 py-0.5 rounded-full">
+                    {upcomingMatch.roundName}
+                  </span>
+                </div>
+                <Link
+                  to={`/tournaments/${upcomingMatch.tournamentId}`}
+                  className="shrink-0 text-xs font-semibold text-[oklch(49.1%_0.27_292.581)] hover:text-[oklch(62%_0.25_292.581)] no-underline transition-colors"
+                >
+                  Ver bracket →
+                </Link>
+              </div>
+
+              <div className="rounded-xl border border-[oklch(26%_0_0)] bg-[oklch(15.5%_0_0)] overflow-hidden mb-3">
+                {/* Team A */}
+                <div className={`flex items-center gap-2 px-3 py-2.5 ${upcomingMatch.match.teamAName === upcomingMatch.myTeamName ? 'bg-[oklch(49.1%_0.27_292.581/0.08)]' : ''}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${upcomingMatch.match.teamAName === upcomingMatch.myTeamName ? 'bg-[oklch(58%_0.27_292.581)] shadow-[0_0_6px_oklch(58%_0.27_292.581/0.8)]' : 'bg-[oklch(22%_0_0)]'}`} />
+                  <span className="text-xs font-semibold text-[oklch(58%_0_0)] truncate">{upcomingMatch.match.teamAName ?? 'Por definir'}</span>
+                  {upcomingMatch.match.teamAName === upcomingMatch.myTeamName && (
+                    <span className="ml-auto text-[9px] font-bold text-[oklch(49.1%_0.27_292.581)] shrink-0">TU EQUIPO</span>
+                  )}
+                </div>
+                <div className="h-px bg-[oklch(20%_0_0)]" />
+                {/* Team B */}
+                <div className={`flex items-center gap-2 px-3 py-2.5 ${upcomingMatch.match.teamBName === upcomingMatch.myTeamName ? 'bg-[oklch(49.1%_0.27_292.581/0.08)]' : ''}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${upcomingMatch.match.teamBName === upcomingMatch.myTeamName ? 'bg-[oklch(58%_0.27_292.581)] shadow-[0_0_6px_oklch(58%_0.27_292.581/0.8)]' : 'bg-[oklch(22%_0_0)]'}`} />
+                  <span className="text-xs font-semibold text-[oklch(58%_0_0)] truncate">{upcomingMatch.match.teamBName ?? 'Por definir'}</span>
+                  {upcomingMatch.match.teamBName === upcomingMatch.myTeamName && (
+                    <span className="ml-auto text-[9px] font-bold text-[oklch(49.1%_0.27_292.581)] shrink-0">TU EQUIPO</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-[oklch(45%_0_0)] flex items-center gap-1.5">
+                  <svg viewBox="0 0 10 10" fill="none" className="w-3 h-3 shrink-0">
+                    <rect x="0.5" y="1.5" width="9" height="8" rx="1" stroke="currentColor" strokeWidth="1.1"/>
+                    <path d="M0.5 4h9M3 0.5v2M7 0.5v2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                  </svg>
+                  {formatMatchDate(upcomingMatch.match.scheduledAt!)}
+                </p>
+                {upcomingMatch.match.riotLobbyCode && (
+                  <button
+                    onClick={() => navigator.clipboard.writeText(upcomingMatch.match.riotLobbyCode!)}
+                    className="flex items-center gap-1.5 text-[10px] font-mono font-semibold text-[oklch(55%_0.2_292.581)] bg-[oklch(49.1%_0.27_292.581/0.1)] hover:bg-[oklch(49.1%_0.27_292.581/0.18)] border border-[oklch(49.1%_0.27_292.581/0.2)] rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer"
+                  >
+                    <svg viewBox="0 0 10 10" fill="none" className="w-2.5 h-2.5 shrink-0">
+                      <rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1"/>
+                      <path d="M1 7V1h6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Copiar código Riot
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Recent tournaments */}
         <div>

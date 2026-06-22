@@ -1,4 +1,4 @@
-import { useEffect, useState, Fragment } from 'react'
+import { useEffect, useState, Fragment, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { MainLayout } from '../components/MainLayout'
 import { api } from '../lib/api'
@@ -61,7 +61,12 @@ function TeamCard({ team }: TeamCardProps) {
 
 // ── Bracket Components ────────────────────────────────────────────────────────
 
-const SLOT_UNIT = 88  // base slot height: card (~72px) + gap (16px)
+const SLOT_UNIT = 132  // base slot height: card (up to ~124px with schedule+lobby) + gap (~8px)
+
+function formatMatchDate(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
 
 function BracketTeamRow({ name, isWinner }: { name: string | null; isWinner: boolean }) {
   return (
@@ -85,6 +90,14 @@ function BracketTeamRow({ name, isWinner }: { name: string | null; isWinner: boo
 function BracketMatchCard({ match }: { match: BracketMatchEntry }) {
   const aWon = !!match.winnerId && match.teamAId === match.winnerId
   const bWon = !!match.winnerId && match.teamBId === match.winnerId
+  const [copied, setCopied] = useState(false)
+
+  const copyLobby = useCallback(() => {
+    if (!match.riotLobbyCode) return
+    navigator.clipboard.writeText(match.riotLobbyCode)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }, [match.riotLobbyCode])
 
   return (
     <div className={`w-52 rounded-xl overflow-hidden border transition-all ${
@@ -95,6 +108,35 @@ function BracketMatchCard({ match }: { match: BracketMatchEntry }) {
       <BracketTeamRow name={match.teamAName} isWinner={aWon} />
       <div className="h-px bg-[oklch(20%_0_0)]" />
       <BracketTeamRow name={match.teamBName} isWinner={bWon} />
+
+      {(match.scheduledAt || match.riotLobbyCode) && (
+        <>
+          <div className="h-px bg-[oklch(18%_0_0)]" />
+          <div className="px-3 py-2 flex flex-col gap-1.5">
+            {match.scheduledAt && (
+              <p className="text-[10px] text-[oklch(40%_0_0)] flex items-center gap-1.5">
+                <svg viewBox="0 0 10 10" fill="none" className="w-2.5 h-2.5 shrink-0 text-[oklch(35%_0_0)]">
+                  <rect x="0.5" y="1.5" width="9" height="8" rx="1" stroke="currentColor" strokeWidth="1"/>
+                  <path d="M0.5 4h9M3 0.5v2M7 0.5v2" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+                </svg>
+                {formatMatchDate(match.scheduledAt)}
+              </p>
+            )}
+            {match.riotLobbyCode && (
+              <button
+                onClick={copyLobby}
+                className="flex items-center gap-1.5 text-[10px] font-mono text-[oklch(55%_0.2_292.581)] bg-[oklch(49.1%_0.27_292.581/0.08)] hover:bg-[oklch(49.1%_0.27_292.581/0.15)] rounded px-2 py-1 transition-colors cursor-pointer w-full"
+              >
+                <svg viewBox="0 0 10 10" fill="none" className="w-2.5 h-2.5 shrink-0">
+                  <rect x="3" y="3" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1"/>
+                  <path d="M1 7V1h6" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="truncate">{copied ? '¡Copiado!' : match.riotLobbyCode}</span>
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -188,7 +230,8 @@ function BracketView({ bracket }: { bracket: Bracket }) {
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-[oklch(19%_0_0)] bg-[oklch(12.5%_0_0)] p-6">
-      <div className="flex items-start gap-0 min-w-max">
+      <div className="min-w-full flex justify-center">
+      <div className="flex items-start gap-0">
 
         {/* LEFT SIDE: outermost round → innermost (Semi-L) */}
         {leftRounds.map((round, ri) => {
@@ -224,6 +267,7 @@ function BracketView({ bracket }: { bracket: Bracket }) {
           )
         })}
 
+      </div>
       </div>
     </div>
   )
